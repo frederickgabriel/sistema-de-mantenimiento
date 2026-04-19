@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Mantenimiento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body class="bg-light d-flex align-items-center min-vh-100">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-5">
+                
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-white text-center py-4 border-0">
+                        <h4 class="mb-0 text-primary fw-bold">Gestión de Mantenimiento</h4>
+                        <p class="text-muted small mt-1">Acceso al sistema institucional</p>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <ul class="nav nav-pills nav-justified mb-4" id="pills-tab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="pills-login-tab" data-bs-toggle="pill" data-bs-target="#pills-login" type="button" role="tab">Iniciar Sesión</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="pills-registro-tab" data-bs-toggle="pill" data-bs-target="#pills-registro" type="button" role="tab">Registrarse</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="pills-tabContent">
+                            
+                            <div class="tab-pane fade show active" id="pills-login" role="tabpanel">
+                                <form id="formLogin">
+                                    <div class="mb-3">
+                                        <label for="loginCorreo" class="form-label text-secondary">Correo Electrónico</label>
+                                        <input type="email" class="form-control" id="loginCorreo" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="loginPassword" class="form-label text-secondary">Contraseña</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="loginPassword" required>
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="loginPassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 py-2">Ingresar al Sistema</button>
+                                </form>
+                            </div>
+
+                            <div class="tab-pane fade" id="pills-registro" role="tabpanel">
+                                <form id="formRegistro">
+                                    <div class="mb-3">
+                                        <label for="regNombre" class="form-label text-secondary">Nombre Completo</label>
+                                        <input type="text" class="form-control" id="regNombre" required>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="regCargo" class="form-label text-secondary">Cargo</label>
+                                            <input type="text" class="form-control" id="regCargo" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="regEdad" class="form-label text-secondary">Edad</label>
+                                            <input type="number" class="form-control" id="regEdad">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regCorreo" class="form-label text-secondary">Correo Electrónico</label>
+                                        <input type="email" class="form-control" id="regCorreo" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="regPassword" class="form-label text-secondary">Contraseña</label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="regPassword" required>
+                                            <button class="btn btn-outline-secondary toggle-password" type="button" data-target="regPassword">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-outline-primary w-100 py-2">Crear Cuenta</button>
+                                </form>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

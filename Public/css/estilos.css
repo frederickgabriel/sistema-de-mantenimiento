@@ -1,0 +1,54 @@
+/* Importar una fuente limpia y formal */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    /* Un color de fondo ligeramente gris azulado para descansar la vista */
+    background-color: #f4f6f9 !important; 
+}
+
+/* Estilo para los campos de texto al seleccionarlos */
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Modificar el color principal para que sea un azul más institucional */
+.text-primary {
+    color: #004085 !important;
+}
+.btn-primary {
+    background-color: #004085;
+    border-color: #004085;
+}
+.btn-primary:hover {
+    background-color: #002752;
+    border-color: #002752;
+}
+
+/* Suavizar las sombras de la tarjeta principal */
+.shadow-sm {
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.05) !important;
+}
+
+/* --- Estilos para el Dashboard --- */
+
+/* Ajuste del menú lateral */
+.sidebar {
+    background-color: #1a202c !important; /* Un azul/gris muy oscuro y elegante */
+}
+
+.sidebar .nav-link {
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+}
+
+/* Efecto al pasar el mouse por los enlaces del menú */
+.sidebar .nav-link:hover:not(.bg-primary):not(.text-danger) {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
+}
+
+.sidebar .nav-link.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
