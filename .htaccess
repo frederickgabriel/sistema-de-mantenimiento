@@ -1,0 +1,12 @@
+Options -Indexes
+RewriteEngine On
+
+# Redirigir raíz a index.php
+RewriteRule ^$ /index.php [L]
+
+# Permitir acceso a archivos reales (css, js, img)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Redirigir resto a index.php
+RewriteRule ^(.*)$ /index.php [QSA,L]
