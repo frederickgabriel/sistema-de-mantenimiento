@@ -45,11 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $area  = $_POST['id_area'] ?: null;
         if ($inv && $model) {
             try {
-                $db->prepare("INSERT INTO Equipos (numero_inventario, modelo, marca, procesador, ram, disco, id_area, estado) VALUES (?,?,?,?,?,?,'Activo',?)")
-                   ->execute([$inv, $model, $marca, $proc, $ram, $disco, $area]);
-
-                // Reorder params to match query
-                $db->prepare("INSERT INTO Equipos (numero_inventario, modelo, marca, procesador, ram, disco, id_area) VALUES (?,?,?,?,?,?,?)")
+                $db->prepare("INSERT INTO Equipos (numero_inventario, modelo, marca, procesador, ram, disco, id_area, estado) VALUES (?,?,?,?,?,?,?,'Activo')")
                    ->execute([$inv, $model, $marca, $proc, $ram, $disco, $area]);
                 $msg = "✅ Equipo «{$inv}» registrado.";
             } catch (PDOException $e) {

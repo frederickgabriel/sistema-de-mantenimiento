@@ -13,7 +13,7 @@ function navLink(string $page, string $icon, string $label, string $current): st
     <div class="sidebar-brand">
         <div class="brand-icon">🖥</div>
         <div class="brand-text">
-            <span class="brand-name">ManteTech</span>
+            <span class="brand-name">TechCare</span>
             <span class="brand-sub">Sistema de Gestión</span>
         </div>
     </div>
@@ -32,6 +32,8 @@ function navLink(string $page, string $icon, string $label, string $current): st
             <?= navLink('equipos.php', '🖥', 'Equipos y Áreas', $currentPage) ?>
             <?= navLink('mantenimientos.php', '🔧', 'Mantenimientos', $currentPage) ?>
             <?= navLink('tareas.php', '📋', 'Tareas', $currentPage) ?>
+            <?= navLink('calendario.php', '📅', 'Calendario', $currentPage) ?>
+            <?= navLink('bajas.php', '📛', 'Bajas de Equipos', $currentPage) ?>
             <?= navLink('reportes.php', '📊', 'Reportes PDF', $currentPage) ?>
         </ul>
     </nav>

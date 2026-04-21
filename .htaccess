@@ -10,3 +10,5 @@ RewriteRule ^ - [L]
 
 # Redirigir resto a index.php
 RewriteRule ^(.*)$ /index.php [QSA,L]
+
+

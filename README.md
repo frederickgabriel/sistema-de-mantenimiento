@@ -1,3 +1,5 @@
+<!-- http://sistema_mantenimiento.test/index.php -->
+
 # 🖥 Sistema de Gestión de Mantenimiento — ManteTech
 
 Sistema completo en **PHP + MySQL + HTML/CSS** para gestionar mantenimiento de equipos de cómputo.
