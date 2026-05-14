@@ -1,4 +1,4 @@
-<!-- http://sistema_mantenimiento.test/index.php -->
+<!-- http://sistema-mantenimiento.test/index.php -->
 
 # 🖥 Sistema de Gestión de Mantenimiento — ManteTech
 
