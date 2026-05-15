@@ -112,6 +112,27 @@ CREATE TABLE IF NOT EXISTS Bajas (
     FOREIGN KEY (id_tecnico_responsable) REFERENCES Usuarios(id_usuario)        ON DELETE SET NULL
 );
 
+
+-- Agregar columna de rol a Usuarios
+ALTER TABLE Usuarios
+    ADD COLUMN rol ENUM('admin','usuario') DEFAULT 'usuario' AFTER correo;
+ 
+-- Tabla de solicitudes de rol admin
+CREATE TABLE IF NOT EXISTS SolicitudesRol (
+    id_solicitud   INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario     INT NOT NULL,
+    justificacion  TEXT NOT NULL,
+    estado         ENUM('Pendiente','Aprobada','Rechazada') DEFAULT 'Pendiente',
+    respuesta      TEXT NULL,
+    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_respuesta TIMESTAMP NULL,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE CASCADE
+);
+ 
+-- El primer usuario registrado lo puedes hacer admin manualmente:
+-- UPDATE Usuarios SET rol='admin' WHERE id_usuario = 1;
+ 
+
 -- =============================================
 -- DATOS DE EJEMPLO (opcional, puedes borrarlos)
 -- =============================================

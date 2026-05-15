@@ -487,6 +487,13 @@ $iniciales  = substr($iniciales, 0, 2);
                             <span class="nav-icon">ℹ</span> Info de Cuenta
                         </a>
                     </li>
+                    <?php if (!esAdmin()): ?>
+                    <li>
+                        <a href="?tab=rol" class="<?= $tab === 'rol' ? 'active' : '' ?>">
+                            <span class="nav-icon">👑</span> Solicitar Admin
+                        </a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </div>
 
@@ -803,6 +810,84 @@ $iniciales  = substr($iniciales, 0, 2);
                     </div>
                 </div>
                 <?php endif; ?>
+
+                <?php elseif ($tab === 'rol' && !esAdmin()): ?>
+                <!-- ========================
+                     PESTAÑA: SOLICITAR ROL
+                     ======================== -->
+
+                <?php
+                // Verificar si ya tiene solicitud pendiente o aprobada
+                $dbRol     = getDB();
+                $stRol     = $dbRol->prepare("SELECT * FROM SolicitudesRol WHERE id_usuario=? ORDER BY fecha_solicitud DESC LIMIT 1");
+                $stRol->execute([$usuario['id_usuario']]);
+                $solActual = $stRol->fetch();
+                ?>
+
+                <div class="config-section">
+                    <div class="config-section-header">
+                        <div class="config-section-title">👑 Solicitar Rol de Administrador</div>
+                        <div class="config-section-sub">
+                            El administrador del sistema evaluará tu solicitud y te notificará por correo
+                        </div>
+                    </div>
+                    <div class="config-section-body">
+
+                        <!-- Diferencia de roles -->
+                        <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:22px">
+                            <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px">¿Qué puede hacer un Administrador?</p>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+                                <div style="color:var(--success)">✅ Crear y editar Áreas</div>
+                                <div style="color:var(--success)">✅ Crear y eliminar Equipos</div>
+                                <div style="color:var(--success)">✅ Eliminar Mantenimientos</div>
+                                <div style="color:var(--success)">✅ Gestionar Bajas de Equipos</div>
+                                <div style="color:var(--success)">✅ Validar dictámenes de Baja</div>
+                                <div style="color:var(--success)">✅ Gestionar roles de usuarios</div>
+                            </div>
+                        </div>
+
+                        <?php if ($solActual): ?>
+                            <?php if ($solActual['estado'] === 'Pendiente'): ?>
+                                <div class="alert alert-warning">
+                                    ⏳ Ya tienes una solicitud <strong>pendiente</strong> enviada el
+                                    <?= fechaES(date('Y-m-d', strtotime($solActual['fecha_solicitud']))) ?>.
+                                    El administrador la revisará pronto.
+                                </div>
+                            <?php elseif ($solActual['estado'] === 'Aprobada'): ?>
+                                <div class="alert alert-success">
+                                    ✅ Tu solicitud fue <strong>aprobada</strong>. Cierra sesión y vuelve a entrar para ver los cambios.
+                                </div>
+                            <?php elseif ($solActual['estado'] === 'Rechazada'): ?>
+                                <div class="alert alert-error">
+                                    ❌ Tu última solicitud fue <strong>rechazada</strong>.
+                                    <?= $solActual['respuesta'] ? '<br>Motivo: ' . e($solActual['respuesta']) : '' ?>
+                                </div>
+                                <!-- Permitir nueva solicitud si fue rechazada -->
+                                <form method="POST" action="/actions/solicitar_rol.php">
+                                    <div class="form-group">
+                                        <label>Nueva justificación *</label>
+                                        <textarea name="justificacion" rows="4" required
+                                            placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad en el sistema..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">📨 Enviar Nueva Solicitud</button>
+                                </form>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <!-- Sin solicitud previa -->
+                            <form method="POST" action="/actions/solicitar_rol.php">
+                                <div class="form-group">
+                                    <label>Justificación *</label>
+                                    <textarea name="justificacion" rows="4" required
+                                        placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad en el sistema..."></textarea>
+                                </div>
+                                <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary)">
+                                    📧 Tu solicitud será enviada al correo del administrador del sistema para su revisión.
+                                </div>
+                                <button type="submit" class="btn btn-primary">📨 Enviar Solicitud</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
 
                 <?php endif; ?>
 
