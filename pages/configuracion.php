@@ -164,6 +164,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // --- Solicitar Rol Admin ---
+    elseif ($action === 'solicitar_rol' && !esAdmin()) {
+        $tab           = 'rol';
+        $justificacion = trim($_POST['justificacion'] ?? '');
+
+        if (!$justificacion) {
+            $err = 'La justificación es obligatoria.';
+        } else {
+            try {
+                // Verificar si ya tiene solicitud pendiente
+                $chk = $db->prepare("SELECT id_solicitud FROM SolicitudesRol WHERE id_usuario=? AND estado='Pendiente'");
+                $chk->execute([$usuario['id_usuario']]);
+                if ($chk->fetch()) {
+                    $err = 'Ya tienes una solicitud pendiente de revisión.';
+                } else {
+                    $db->prepare("INSERT INTO SolicitudesRol (id_usuario, justificacion) VALUES (?,?)")
+                       ->execute([$usuario['id_usuario'], $justificacion]);
+                    $msg = '✅ Solicitud enviada. El administrador la revisará en su panel de Gestión de Roles.';
+                }
+            } catch (PDOException $e) {
+                $err = '❌ Error al guardar: ' . $e->getMessage() . ' — Asegúrate de haber ejecutado database_roles.sql';
+            }
+        }
+    }
+
     // Redirigir para evitar reenvío de formulario
     if ($msg || $err) {
         $param = $msg ? 'msg=' . urlencode($msg) : 'err=' . urlencode($err);
@@ -815,25 +840,34 @@ $iniciales  = substr($iniciales, 0, 2);
                 <!-- ========================
                      PESTAÑA: SOLICITAR ROL
                      ======================== -->
-
                 <?php
-                // Verificar si ya tiene solicitud pendiente o aprobada
-                $dbRol     = getDB();
-                $stRol     = $dbRol->prepare("SELECT * FROM SolicitudesRol WHERE id_usuario=? ORDER BY fecha_solicitud DESC LIMIT 1");
-                $stRol->execute([$usuario['id_usuario']]);
-                $solActual = $stRol->fetch();
+                // Cargar solicitud más reciente del usuario
+                try {
+                    $stRol = getDB()->prepare("SELECT * FROM SolicitudesRol WHERE id_usuario=? ORDER BY fecha_solicitud DESC LIMIT 1");
+                    $stRol->execute([$usuario['id_usuario']]);
+                    $solActual = $stRol->fetch();
+                } catch (Exception $e) {
+                    $solActual = false;
+                    $err = '⚠ La tabla de solicitudes no existe. Ejecuta database_roles.sql en phpMyAdmin.';
+                }
                 ?>
 
                 <div class="config-section">
                     <div class="config-section-header">
                         <div class="config-section-title">👑 Solicitar Rol de Administrador</div>
-                        <div class="config-section-sub">
-                            El administrador del sistema evaluará tu solicitud y te notificará por correo
-                        </div>
+                        <div class="config-section-sub">El administrador evaluará tu solicitud desde su panel de Gestión de Roles</div>
                     </div>
                     <div class="config-section-body">
 
-                        <!-- Diferencia de roles -->
+                        <?php if ($err): ?>
+                            <div class="alert alert-error"><?= e($err) ?></div>
+                        <?php endif; ?>
+
+                        <?php if ($msg): ?>
+                            <div class="alert alert-success"><?= e($msg) ?></div>
+                        <?php endif; ?>
+
+                        <!-- Info de permisos admin -->
                         <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:22px">
                             <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px">¿Qué puede hacer un Administrador?</p>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
@@ -846,45 +880,55 @@ $iniciales  = substr($iniciales, 0, 2);
                             </div>
                         </div>
 
-                        <?php if ($solActual): ?>
-                            <?php if ($solActual['estado'] === 'Pendiente'): ?>
-                                <div class="alert alert-warning">
-                                    ⏳ Ya tienes una solicitud <strong>pendiente</strong> enviada el
-                                    <?= fechaES(date('Y-m-d', strtotime($solActual['fecha_solicitud']))) ?>.
-                                    El administrador la revisará pronto.
-                                </div>
-                            <?php elseif ($solActual['estado'] === 'Aprobada'): ?>
-                                <div class="alert alert-success">
-                                    ✅ Tu solicitud fue <strong>aprobada</strong>. Cierra sesión y vuelve a entrar para ver los cambios.
-                                </div>
-                            <?php elseif ($solActual['estado'] === 'Rechazada'): ?>
-                                <div class="alert alert-error">
-                                    ❌ Tu última solicitud fue <strong>rechazada</strong>.
-                                    <?= $solActual['respuesta'] ? '<br>Motivo: ' . e($solActual['respuesta']) : '' ?>
-                                </div>
-                                <!-- Permitir nueva solicitud si fue rechazada -->
-                                <form method="POST" action="/actions/solicitar_rol.php">
-                                    <div class="form-group">
-                                        <label>Nueva justificación *</label>
-                                        <textarea name="justificacion" rows="4" required
-                                            placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad en el sistema..."></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">📨 Enviar Nueva Solicitud</button>
-                                </form>
+                        <?php
+                        // Decidir qué mostrar según estado de la solicitud
+                        if ($solActual && $solActual['estado'] === 'Pendiente' && !$msg):
+                        ?>
+                            <div class="alert alert-warning">
+                                ⏳ <strong>Solicitud pendiente.</strong> Enviada el <?= fechaES(date('Y-m-d', strtotime($solActual['fecha_solicitud']))) ?>.<br>
+                                El administrador la verá en su panel y te responderá pronto.
+                            </div>
+
+                        <?php elseif ($solActual && $solActual['estado'] === 'Aprobada' && !$msg): ?>
+                            <div class="alert alert-success">
+                                ✅ <strong>¡Tu solicitud fue aprobada!</strong><br>
+                                Cierra sesión y vuelve a entrar para que los cambios tengan efecto.
+                            </div>
+                            <a href="/actions/logout.php" class="btn btn-primary" style="margin-top:8px">↩ Cerrar sesión ahora</a>
+
+                        <?php elseif ($solActual && $solActual['estado'] === 'Rechazada'): ?>
+                            <?php if (!$msg): ?>
+                            <div class="alert alert-error">
+                                ❌ <strong>Solicitud rechazada.</strong>
+                                <?= $solActual['respuesta'] ? '<br>Motivo del administrador: <em>' . e($solActual['respuesta']) . '</em>' : '' ?>
+                            </div>
                             <?php endif; ?>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">Puedes enviar una nueva solicitud con una justificación más detallada:</p>
+                            <form method="POST" action="/pages/configuracion.php">
+                                <input type="hidden" name="action" value="solicitar_rol">
+                                <div class="form-group">
+                                    <label>Nueva justificación *</label>
+                                    <textarea name="justificacion" rows="4" required placeholder="Explica por qué necesitas permisos de Administrador..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">📨 Enviar Nueva Solicitud</button>
+                            </form>
+
                         <?php else: ?>
-                            <!-- Sin solicitud previa -->
-                            <form method="POST" action="/actions/solicitar_rol.php">
+                            <!-- Sin solicitud previa o recién enviada (mostrar form solo si no hay msg de éxito) -->
+                            <?php if (!$msg): ?>
+                            <form method="POST" action="/pages/configuracion.php">
+                                <input type="hidden" name="action" value="solicitar_rol">
                                 <div class="form-group">
                                     <label>Justificación *</label>
-                                    <textarea name="justificacion" rows="4" required
-                                        placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad en el sistema..."></textarea>
+                                    <textarea name="justificacion" rows="4" required placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad..."></textarea>
                                 </div>
                                 <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary)">
-                                    📧 Tu solicitud será enviada al correo del administrador del sistema para su revisión.
+                                    📧 Tu solicitud quedará registrada y el administrador la verá en su panel de <strong>Gestión de Roles</strong>.
                                 </div>
-                                <button type="submit" class="btn btn-primary">📨 Enviar Solicitud</button>
+                                <button type="submit" class="btn btn-primary btn-full">📨 Enviar Solicitud</button>
                             </form>
+                            <?php endif; ?>
+
                         <?php endif; ?>
                     </div>
                 </div>

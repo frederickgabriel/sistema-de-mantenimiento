@@ -58,7 +58,23 @@ function navLink(string $page, string $icon, string $label, string $current): st
             <?= navLink('reportes.php',       '📊', 'Reportes PDF',    $currentPage) ?>
             <?php if (($_SESSION['usuario']['rol'] ?? 'usuario') === 'admin'): ?>
                 <?= navLink('bajas.php',      '📛', 'Bajas de Equipos',$currentPage) ?>
-                <?= navLink('admin_roles.php','👑', 'Gestión de Roles', $currentPage) ?>
+                <?php
+                // Badge de solicitudes pendientes para admin
+                try {
+                    $pendRoles = getDB()->query("SELECT COUNT(*) FROM SolicitudesRol WHERE estado='Pendiente'")->fetchColumn();
+                } catch (Exception $e) { $pendRoles = 0; }
+                ?>
+                <li>
+                    <a href="/pages/admin_roles.php" class="nav-item <?= $currentPage === 'admin_roles.php' ? 'active' : '' ?>">
+                        <span class="nav-icon">👑</span>
+                        <span class="nav-label">Gestión de Roles</span>
+                        <?php if ($pendRoles > 0): ?>
+                            <span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:2px 7px;line-height:1.4">
+                                <?= $pendRoles ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                </li>
             <?php endif; ?>
         </ul>
     </nav>

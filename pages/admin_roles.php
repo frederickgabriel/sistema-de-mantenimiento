@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $idSolicitud = (int)($_POST['id_solicitud'] ?? 0);
     $respuesta   = trim($_POST['respuesta'] ?? '');
 
+    try {
     // --- Aprobar solicitud ---
     if ($action === 'aprobar' && $idSolicitud) {
         // Obtener id_usuario de la solicitud
@@ -61,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = '✅ Rol de Administrador otorgado.';
     }
 
+    } catch (PDOException $e) {
+        $msg = '❌ Error de base de datos: ' . $e->getMessage();
+        header("Location: /pages/admin_roles.php?msg=" . urlencode($msg));
+        exit;
+    }
     header("Location: /pages/admin_roles.php?msg=" . urlencode($msg));
     exit;
 }
@@ -68,12 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
 // Cargar solicitudes
-$solicitudes = $db->query("
-    SELECT s.*, u.nombre, u.cargo, u.correo, u.rol
-    FROM SolicitudesRol s
-    JOIN Usuarios u ON u.id_usuario = s.id_usuario
-    ORDER BY FIELD(s.estado,'Pendiente','Aprobada','Rechazada'), s.fecha_solicitud DESC
-")->fetchAll();
+try {
+    $solicitudes = $db->query("
+        SELECT s.*, u.nombre, u.cargo, u.correo, u.rol
+        FROM SolicitudesRol s
+        JOIN Usuarios u ON u.id_usuario = s.id_usuario
+        ORDER BY FIELD(s.estado,'Pendiente','Aprobada','Rechazada'), s.fecha_solicitud DESC
+    ")->fetchAll();
+} catch (PDOException $e) {
+    $solicitudes = [];
+    $msg = '❌ ERROR: La tabla SolicitudesRol no existe. Ejecuta el archivo database_roles.sql en phpMyAdmin primero.';
+}
 
 // Cargar todos los usuarios
 $usuarios = $db->query("
@@ -260,38 +271,31 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                 </div>
 
                                 <?php if ($s['estado'] === 'Pendiente'): ?>
-                                <!-- Formulario de respuesta -->
-                                <details style="margin-top:8px">
-                                    <summary style="cursor:pointer;font-size:13px;color:var(--accent);margin-bottom:10px">
-                                        Responder solicitud →
-                                    </summary>
-                                    <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-                                        <div class="form-group" style="margin-bottom:0">
-                                            <label>Respuesta / Observación (opcional)</label>
-                                            <textarea id="resp_<?= $s['id_solicitud'] ?>" rows="2"
-                                                style="width:100%;background:var(--bg-main);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px;font-family:var(--font-main);font-size:13px"
-                                                placeholder="Mensaje para el usuario..."></textarea>
+                                <!-- Formulario de respuesta — un solo form con acción dinámica -->
+                                <div style="margin-top:12px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px">
+                                    <form method="POST" action="/pages/admin_roles.php" id="form_sol_<?= $s['id_solicitud'] ?>">
+                                        <input type="hidden" name="id_solicitud" value="<?= $s['id_solicitud'] ?>">
+                                        <input type="hidden" name="action" id="action_<?= $s['id_solicitud'] ?>" value="">
+                                        <div style="margin-bottom:10px">
+                                            <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);display:block;margin-bottom:5px">
+                                                Respuesta / Observación para el usuario (opcional)
+                                            </label>
+                                            <textarea name="respuesta" rows="2"
+                                                style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px;font-family:var(--font-main);font-size:13px;resize:vertical"
+                                                placeholder="Escribe un mensaje para notificar al usuario del resultado..."></textarea>
                                         </div>
                                         <div style="display:flex;gap:8px">
-                                            <form method="POST" style="flex:1" onsubmit="document.querySelector('[name=respuesta]',this).value=document.getElementById('resp_<?= $s['id_solicitud'] ?>').value">
-                                                <input type="hidden" name="action" value="aprobar">
-                                                <input type="hidden" name="id_solicitud" value="<?= $s['id_solicitud'] ?>">
-                                                <input type="hidden" name="respuesta" value="">
-                                                <button type="submit" class="btn btn-success btn-sm btn-full"
-                                                    onclick="this.form.querySelector('[name=respuesta]').value=document.getElementById('resp_<?= $s['id_solicitud'] ?>').value"
-                                                    >✅ Aprobar</button>
-                                            </form>
-                                            <form method="POST" style="flex:1">
-                                                <input type="hidden" name="action" value="rechazar">
-                                                <input type="hidden" name="id_solicitud" value="<?= $s['id_solicitud'] ?>">
-                                                <input type="hidden" name="respuesta" value="">
-                                                <button type="submit" class="btn btn-danger btn-sm btn-full"
-                                                    onclick="this.form.querySelector('[name=respuesta]').value=document.getElementById('resp_<?= $s['id_solicitud'] ?>').value"
-                                                    >❌ Rechazar</button>
-                                            </form>
+                                            <button type="submit" class="btn btn-success btn-sm" style="flex:1"
+                                                onclick="document.getElementById('action_<?= $s['id_solicitud'] ?>').value='aprobar'">
+                                                ✅ Aprobar Solicitud
+                                            </button>
+                                            <button type="submit" class="btn btn-danger btn-sm" style="flex:1"
+                                                onclick="document.getElementById('action_<?= $s['id_solicitud'] ?>').value='rechazar'">
+                                                ❌ Rechazar Solicitud
+                                            </button>
                                         </div>
-                                    </div>
-                                </details>
+                                    </form>
+                                </div>
 
                                 <?php elseif ($s['respuesta']): ?>
                                 <div class="sol-respuesta <?= $s['estado'] === 'Rechazada' ? 'rechazada' : '' ?>">
