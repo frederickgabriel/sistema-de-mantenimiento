@@ -55,6 +55,7 @@ function navLink(string $page, string $icon, string $label, string $current): st
             <?= navLink('mantenimientos.php', '🔧', 'Mantenimientos',  $currentPage) ?>
             <?= navLink('tareas.php',         '📋', 'Tareas',          $currentPage) ?>
             <?= navLink('calendario.php',     '📅', 'Calendario',      $currentPage) ?>
+            <?= navLink('estadisticas.php',   '📈', 'Estadísticas',    $currentPage) ?>
             <?= navLink('reportes.php',       '📊', 'Reportes PDF',    $currentPage) ?>
             <?php if (($_SESSION['usuario']['rol'] ?? 'usuario') === 'admin'): ?>
                 <?= navLink('bajas.php',      '📛', 'Bajas de Equipos',$currentPage) ?>

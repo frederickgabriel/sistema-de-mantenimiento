@@ -1,107 +1,90 @@
 <?php
-// =============================================
-// ESTADÍSTICAS DE MANTENIMIENTO
-// Archivo: pages/estadisticas.php
-// =============================================
 require_once '../includes/config.php';
 requireLogin();
 
 $db = getDB();
 
-// ============================================
-// 1. Equipos por área (barras)
-// ============================================
+// 1. Equipos por área
 $equiposPorArea = $db->query("
     SELECT a.nombre_area, COUNT(e.numero_inventario) as total
-    FROM Areas a
-    LEFT JOIN Equipos e ON e.id_area = a.id_area
-    GROUP BY a.id_area, a.nombre_area
-    ORDER BY total DESC
+    FROM Areas a LEFT JOIN Equipos e ON e.id_area = a.id_area
+    GROUP BY a.id_area, a.nombre_area ORDER BY total DESC
 ")->fetchAll();
 
-// ============================================
-// 2. Bajas por área (pastel)
-// ============================================
-$bajasPorArea = $db->query("
-    SELECT a.nombre_area, COUNT(b.id_baja) as total
-    FROM Areas a
-    INNER JOIN Equipos e  ON e.id_area   = a.id_area
-    INNER JOIN Bajas b    ON b.numero_inventario = e.numero_inventario
-    GROUP BY a.id_area, a.nombre_area
-    ORDER BY total DESC
+// 2. Bajas por área
+try {
+    $bajasPorArea = $db->query("
+        SELECT a.nombre_area, COUNT(b.id_baja) as total
+        FROM Areas a
+        INNER JOIN Equipos e ON e.id_area = a.id_area
+        INNER JOIN Bajas b ON b.numero_inventario = e.numero_inventario
+        GROUP BY a.id_area, a.nombre_area ORDER BY total DESC
+    ")->fetchAll();
+} catch (Exception $e) { $bajasPorArea = []; }
+
+// 3. Top equipos con más mantenimientos
+$topEquipos = $db->query("
+    SELECT m.numero_inventario, e.modelo,
+           COUNT(*) as total,
+           SUM(m.tipo_mantenimiento='Preventivo') as preventivos,
+           SUM(m.tipo_mantenimiento='Correctivo') as correctivos
+    FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario
+    GROUP BY m.numero_inventario, e.modelo ORDER BY total DESC LIMIT 10
 ")->fetchAll();
 
-// ============================================
-// 3. Equipos que más se dañan (correctivos) (barras horizontal)
-// ============================================
-$equiposMasDanados = $db->query("
-    SELECT m.numero_inventario, e.modelo, e.marca,
-           COUNT(*) as total_correctivos
-    FROM Mantenimientos m
-    JOIN Equipos e ON e.numero_inventario = m.numero_inventario
-    WHERE m.tipo_mantenimiento = 'Correctivo'
-    GROUP BY m.numero_inventario, e.modelo, e.marca
-    ORDER BY total_correctivos DESC
-    LIMIT 10
-")->fetchAll();
-
-// ============================================
-// 4. Mantenimientos por mes (barras agrupadas prev vs corr)
-// ============================================
-$mttosPorMes = $db->query("
-    SELECT 
-        DATE_FORMAT(fecha_realizacion, '%Y-%m') as mes,
-        DATE_FORMAT(fecha_realizacion, '%b %Y')  as mes_label,
-        SUM(tipo_mantenimiento = 'Preventivo')   as preventivos,
-        SUM(tipo_mantenimiento = 'Correctivo')   as correctivos,
-        COUNT(*)                                  as total
+// 4. Mantenimientos por mes (últimos 12 meses)
+$porMes = $db->query("
+    SELECT DATE_FORMAT(fecha_realizacion,'%b %Y') as mes_label,
+           DATE_FORMAT(fecha_realizacion,'%Y-%m') as mes_order,
+           COUNT(*) as total,
+           SUM(tipo_mantenimiento='Preventivo') as preventivos,
+           SUM(tipo_mantenimiento='Correctivo') as correctivos
     FROM Mantenimientos
     WHERE fecha_realizacion >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-    GROUP BY mes, mes_label
-    ORDER BY mes ASC
+    GROUP BY mes_order, mes_label ORDER BY mes_order ASC
 ")->fetchAll();
 
-// ============================================
-// 5. Estado de equipos (dona)
-// ============================================
-$estadoEquipos = $db->query("
-    SELECT estado, COUNT(*) as total
-    FROM Equipos
-    GROUP BY estado
-")->fetchAll();
+// 5. Estado equipos
+$estadosEq = $db->query("SELECT estado, COUNT(*) as total FROM Equipos GROUP BY estado")->fetchAll();
 
-// ============================================
-// 6. Tipo de mantenimiento general (pastel)
-// ============================================
-$tipoMtto = $db->query("
-    SELECT tipo_mantenimiento, COUNT(*) as total
-    FROM Mantenimientos
-    GROUP BY tipo_mantenimiento
-")->fetchAll();
+// 6. Motivos de baja
+try {
+    $motivosBaja = $db->query("SELECT motivo_baja, COUNT(*) as total FROM Bajas GROUP BY motivo_baja ORDER BY total DESC")->fetchAll();
+} catch (Exception $e) { $motivosBaja = []; }
 
-// ============================================
-// 7. Resumen numérico
-// ============================================
-$resumen = [
-    'total_equipos'    => $db->query("SELECT COUNT(*) FROM Equipos")->fetchColumn(),
-    'total_mttos'      => $db->query("SELECT COUNT(*) FROM Mantenimientos")->fetchColumn(),
-    'total_bajas'      => $db->query("SELECT COUNT(*) FROM Bajas")->fetchColumn(),
-    'total_areas'      => $db->query("SELECT COUNT(*) FROM Areas")->fetchColumn(),
-    'mttos_este_mes'   => $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE MONTH(fecha_realizacion)=MONTH(CURDATE()) AND YEAR(fecha_realizacion)=YEAR(CURDATE())")->fetchColumn(),
-    'equipos_activos'  => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado='Activo'")->fetchColumn(),
+// KPIs
+$kpi = [
+    'total'       => $db->query("SELECT COUNT(*) FROM Mantenimientos")->fetchColumn(),
+    'preventivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Preventivo'")->fetchColumn(),
+    'correctivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Correctivo'")->fetchColumn(),
+    'equipos'     => $db->query("SELECT COUNT(*) FROM Equipos")->fetchColumn(),
+    'activos'     => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado='Activo'")->fetchColumn(),
 ];
+try {
+    $kpi['bajas'] = $db->query("SELECT COUNT(*) FROM Bajas")->fetchColumn();
+    $masCorrectivo = $db->query("
+        SELECT m.numero_inventario, e.modelo, COUNT(*) as total
+        FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario
+        WHERE m.tipo_mantenimiento='Correctivo'
+        GROUP BY m.numero_inventario, e.modelo ORDER BY total DESC LIMIT 1
+    ")->fetch();
+} catch (Exception $e) { $kpi['bajas'] = 0; $masCorrectivo = null; }
 
-// ---- Preparar datos JSON para Chart.js ----
-function jsonLabels(array $data, string $key): string {
-    return json_encode(array_column($data, $key));
-}
-function jsonValues(array $data, string $key): string {
-    return json_encode(array_map('intval', array_column($data, $key)));
-}
+$areaMasEq = $db->query("
+    SELECT a.nombre_area, COUNT(e.numero_inventario) as total
+    FROM Areas a LEFT JOIN Equipos e ON e.id_area=a.id_area
+    GROUP BY a.id_area ORDER BY total DESC LIMIT 1
+")->fetch();
 
-// Colores del tema oscuro
-$coloresBarra   = ['#58a6ff','#3fb950','#d29922','#f85149','#a371f7','#79c0ff','#56d364','#ff7b72'];
-$coloresPastel  = ['#58a6ff','#3fb950','#d29922','#f85149','#a371f7','#79c0ff','#ff9e64','#56d364'];
+// JSON para Chart.js
+$chartData = json_encode([
+    'equiposPorArea' => ['labels' => array_column($equiposPorArea,'nombre_area'), 'data' => array_map('intval', array_column($equiposPorArea,'total'))],
+    'bajasPorArea'   => ['labels' => array_column($bajasPorArea,'nombre_area'),   'data' => array_map('intval', array_column($bajasPorArea,'total'))],
+    'topEquipos'     => ['labels' => array_map(fn($r)=>$r['numero_inventario'].' ('.$r['modelo'].')', $topEquipos), 'preventivos' => array_map('intval',array_column($topEquipos,'preventivos')), 'correctivos' => array_map('intval',array_column($topEquipos,'correctivos'))],
+    'porMes'         => ['labels' => array_column($porMes,'mes_label'), 'preventivos' => array_map('intval',array_column($porMes,'preventivos')), 'correctivos' => array_map('intval',array_column($porMes,'correctivos')), 'total' => array_map('intval',array_column($porMes,'total'))],
+    'estados'        => ['labels' => array_column($estadosEq,'estado'), 'data' => array_map('intval',array_column($estadosEq,'total'))],
+    'motivosBaja'    => ['labels' => array_column($motivosBaja,'motivo_baja'), 'data' => array_map('intval',array_column($motivosBaja,'total'))],
+], JSON_UNESCAPED_UNICODE);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -112,120 +95,38 @@ $coloresPastel  = ['#58a6ff','#3fb950','#d29922','#f85149','#a371f7','#79c0ff','
     <link rel="stylesheet" href="/css/estilos.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        .stats-section-title {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: var(--text-muted);
-            margin: 32px 0 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .section-sep {
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .08em; color: var(--text-muted);
+            margin: 28px 0 16px; display: flex; align-items: center; gap: 10px;
         }
-        .stats-section-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
+        .section-sep::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .g1 { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+
+        .ch-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 20px 22px;
         }
+        .ch-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+        .ch-sub   { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+        .ch-wrap  { position: relative; }
+        .no-data  { text-align:center; padding:32px; color:var(--text-muted); font-size:13px; }
 
-        .charts-grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
+        .kpi-row  { display: grid; grid-template-columns: repeat(auto-fit,minmax(155px,1fr)); gap:14px; margin-bottom:28px; }
+        .kpi-box  { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px 18px; text-align:center; }
+        .kpi-ico  { font-size:24px; margin-bottom:6px; }
+        .kpi-val  { font-family:var(--font-mono); font-size:28px; font-weight:700; line-height:1; margin-bottom:3px; }
+        .kpi-lbl  { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+        .kpi-sub  { font-size:11px; color:var(--text-secondary); margin-top:5px; padding-top:5px; border-top:1px solid var(--border-light); }
 
-        .chart-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 20px 22px;
-        }
-
-        .chart-card-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-        }
-
-        .chart-card-sub {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 18px;
-        }
-
-        .chart-wrap {
-            position: relative;
-        }
-
-        .chart-wrap-pie {
-            max-width: 300px;
-            margin: 0 auto;
-        }
-
-        .empty-chart {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            color: var(--text-muted);
-            font-size: 13px;
-            gap: 8px;
-        }
-
-        .ranking-list {
-            list-style: none;
-        }
-
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .ranking-item:last-child { border-bottom: none; }
-
-        .ranking-num {
-            font-family: var(--font-mono);
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-muted);
-            width: 28px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .ranking-num.top1 { color: #d29922; }
-        .ranking-num.top2 { color: #8b949e; }
-        .ranking-num.top3 { color: #c9730a; }
-
-        .ranking-info { flex: 1; min-width: 0; }
-        .ranking-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-        .ranking-sub  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-
-        .ranking-bar-wrap { width: 120px; flex-shrink: 0; }
-        .ranking-bar-track { background: var(--bg-main); border-radius: 4px; height: 6px; overflow: hidden; }
-        .ranking-bar-fill  { height: 100%; border-radius: 4px; background: var(--accent); }
-        .ranking-val { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--accent); text-align: right; margin-top: 3px; }
-
-        @media (max-width: 900px) {
-            .charts-grid-2 { grid-template-columns: 1fr; }
-        }
+        @media(max-width:768px){ .g2{ grid-template-columns:1fr; } }
     </style>
 </head>
 <body>
 <div class="app-layout">
     <?php include '../includes/sidebar.php'; ?>
-
     <main class="main-content">
 
         <div class="page-header">
@@ -235,452 +136,238 @@ $coloresPastel  = ['#58a6ff','#3fb950','#d29922','#f85149','#a371f7','#79c0ff','
             </div>
         </div>
 
-        <!-- Resumen numérico -->
-        <div class="stats-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:8px">
-            <div class="stat-card">
-                <div class="stat-label">Total Equipos</div>
-                <div class="stat-value accent"><?= $resumen['total_equipos'] ?></div>
-                <div class="stat-meta"><?= $resumen['equipos_activos'] ?> activos</div>
+        <!-- KPIs -->
+        <div class="kpi-row">
+            <div class="kpi-box">
+                <div class="kpi-ico">🔧</div>
+                <div class="kpi-val" style="color:var(--accent)"><?= $kpi['total'] ?></div>
+                <div class="kpi-lbl">Total Mantenimientos</div>
+                <div class="kpi-sub">🛡 <?= $kpi['preventivos'] ?> prev · 🔨 <?= $kpi['correctivos'] ?> corr</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Áreas</div>
-                <div class="stat-value"><?= $resumen['total_areas'] ?></div>
+            <div class="kpi-box">
+                <div class="kpi-ico">🛡</div>
+                <div class="kpi-val" style="color:var(--success)"><?= $kpi['preventivos'] ?></div>
+                <div class="kpi-lbl">Preventivos</div>
+                <div class="kpi-sub"><?= $kpi['total'] > 0 ? round(($kpi['preventivos']/$kpi['total'])*100) : 0 ?>% del total</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Mantenimientos</div>
-                <div class="stat-value success"><?= $resumen['total_mttos'] ?></div>
-                <div class="stat-meta">histórico total</div>
+            <div class="kpi-box">
+                <div class="kpi-ico">🔨</div>
+                <div class="kpi-val" style="color:var(--warning)"><?= $kpi['correctivos'] ?></div>
+                <div class="kpi-lbl">Correctivos</div>
+                <div class="kpi-sub"><?= $kpi['total'] > 0 ? round(($kpi['correctivos']/$kpi['total'])*100) : 0 ?>% del total</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Este mes</div>
-                <div class="stat-value warning"><?= $resumen['mttos_este_mes'] ?></div>
-                <div class="stat-meta">mantenimientos</div>
+            <div class="kpi-box">
+                <div class="kpi-ico">🖥</div>
+                <div class="kpi-val" style="color:var(--purple)"><?= $kpi['equipos'] ?></div>
+                <div class="kpi-lbl">Total Equipos</div>
+                <div class="kpi-sub">✅ <?= $kpi['activos'] ?> activos</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Bajas</div>
-                <div class="stat-value danger"><?= $resumen['total_bajas'] ?></div>
-                <div class="stat-meta">equipos dados de baja</div>
+            <div class="kpi-box">
+                <div class="kpi-ico">📛</div>
+                <div class="kpi-val" style="color:var(--danger)"><?= $kpi['bajas'] ?></div>
+                <div class="kpi-lbl">Bajas Registradas</div>
+                <div class="kpi-sub">equipos fuera de servicio</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Tasa de Bajas</div>
-                <div class="stat-value">
-                    <?= $resumen['total_equipos'] > 0
-                        ? round(($resumen['total_bajas'] / ($resumen['total_equipos'] + $resumen['total_bajas'])) * 100, 1)
-                        : 0 ?>%
-                </div>
-                <div class="stat-meta">del inventario total</div>
+            <?php if ($masCorrectivo): ?>
+            <div class="kpi-box">
+                <div class="kpi-ico">⚠</div>
+                <div class="kpi-val" style="color:var(--danger);font-size:18px"><?= e($masCorrectivo['numero_inventario']) ?></div>
+                <div class="kpi-lbl">Más Correctivos</div>
+                <div class="kpi-sub"><?= e(mb_substr($masCorrectivo['modelo'],0,20)) ?> · <?= $masCorrectivo['total'] ?>x</div>
             </div>
-        </div>
-
-        <!-- ========================
-             SECCIÓN 1: EQUIPOS
-             ======================== -->
-        <div class="stats-section-title">🖥 Distribución de Equipos</div>
-
-        <div class="charts-grid-2">
-
-            <!-- Equipos por área — barras -->
-            <div class="chart-card">
-                <div class="chart-card-title">📊 Equipos por Área</div>
-                <div class="chart-card-sub">Cantidad de equipos registrados en cada sala o área</div>
-                <?php if (empty($equiposPorArea)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">🏫</span>Sin datos de áreas</div>
-                <?php else: ?>
-                <div class="chart-wrap" style="height:260px">
-                    <canvas id="chartEquiposPorArea"></canvas>
-                </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Estado de equipos — dona -->
-            <div class="chart-card">
-                <div class="chart-card-title">🍩 Estado Actual de Equipos</div>
-                <div class="chart-card-sub">Distribución por estado: Activo, Inactivo, En Reparación, Baja</div>
-                <?php if (empty($estadoEquipos)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">🖥</span>Sin datos</div>
-                <?php else: ?>
-                <div class="chart-wrap chart-wrap-pie" style="height:260px">
-                    <canvas id="chartEstadoEquipos"></canvas>
-                </div>
-                <?php endif; ?>
-            </div>
-
-        </div>
-
-        <!-- ========================
-             SECCIÓN 2: MANTENIMIENTOS
-             ======================== -->
-        <div class="stats-section-title">🔧 Análisis de Mantenimientos</div>
-
-        <div class="chart-card" style="margin-bottom:20px">
-            <div class="chart-card-title">📅 Mantenimientos por Mes (últimos 12 meses)</div>
-            <div class="chart-card-sub">Comparativa mensual entre mantenimientos Preventivos y Correctivos</div>
-            <?php if (empty($mttosPorMes)): ?>
-                <div class="empty-chart"><span style="font-size:32px">📅</span>Sin registros de mantenimientos aún</div>
-            <?php else: ?>
-            <div class="chart-wrap" style="height:280px">
-                <canvas id="chartMttosPorMes"></canvas>
+            <?php endif; ?>
+            <?php if ($areaMasEq): ?>
+            <div class="kpi-box">
+                <div class="kpi-ico">🏫</div>
+                <div class="kpi-val" style="color:var(--info);font-size:16px;word-break:break-word"><?= e(mb_substr($areaMasEq['nombre_area'],0,18)) ?></div>
+                <div class="kpi-lbl">Área con más Equipos</div>
+                <div class="kpi-sub"><?= $areaMasEq['total'] ?> equipos</div>
             </div>
             <?php endif; ?>
         </div>
 
-        <div class="charts-grid-2">
-
-            <!-- Tipo de mantenimiento — pastel -->
-            <div class="chart-card">
-                <div class="chart-card-title">🥧 Tipo de Mantenimiento</div>
-                <div class="chart-card-sub">Proporción de mantenimientos Preventivos vs Correctivos</div>
-                <?php if (empty($tipoMtto)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">🔧</span>Sin datos</div>
-                <?php else: ?>
-                <div class="chart-wrap chart-wrap-pie" style="height:260px">
-                    <canvas id="chartTipoMtto"></canvas>
-                </div>
-                <?php endif; ?>
+        <!-- Sección 1: Inventario -->
+        <div class="section-sep">🖥 Inventario y Distribución</div>
+        <div class="g2">
+            <div class="ch-card">
+                <div class="ch-title">📊 Equipos por Área</div>
+                <div class="ch-sub">Cantidad de equipos en cada área o salón</div>
+                <div class="ch-wrap" style="height:260px"><canvas id="cArea"></canvas></div>
             </div>
-
-            <!-- Equipos que más se dañan — ranking -->
-            <div class="chart-card">
-                <div class="chart-card-title">⚠ Equipos con Más Mantenimientos Correctivos</div>
-                <div class="chart-card-sub">Top 10 equipos que han requerido más reparaciones</div>
-                <?php if (empty($equiposMasDanados)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">✅</span>Ningún equipo con correctivos</div>
-                <?php else:
-                    $maxCorrectivos = (int)$equiposMasDanados[0]['total_correctivos'];
-                ?>
-                <ul class="ranking-list">
-                    <?php foreach ($equiposMasDanados as $i => $eq):
-                        $pct = $maxCorrectivos > 0 ? round(($eq['total_correctivos'] / $maxCorrectivos) * 100) : 0;
-                        $numClass = $i === 0 ? 'top1' : ($i === 1 ? 'top2' : ($i === 2 ? 'top3' : ''));
-                        $medal = $i === 0 ? '🥇' : ($i === 1 ? '🥈' : ($i === 2 ? '🥉' : ''));
-                    ?>
-                    <li class="ranking-item">
-                        <div class="ranking-num <?= $numClass ?>"><?= $medal ?: '#'.($i+1) ?></div>
-                        <div class="ranking-info">
-                            <div class="ranking-name"><?= e($eq['numero_inventario']) ?></div>
-                            <div class="ranking-sub"><?= e($eq['modelo']) ?> <?= e($eq['marca'] ?? '') ?></div>
-                        </div>
-                        <div class="ranking-bar-wrap">
-                            <div class="ranking-bar-track">
-                                <div class="ranking-bar-fill" style="width:<?= $pct ?>%;background:<?= $i===0 ? 'var(--danger)' : ($i<=2 ? 'var(--warning)' : 'var(--accent)') ?>"></div>
-                            </div>
-                            <div class="ranking-val"><?= $eq['total_correctivos'] ?> correctivo<?= $eq['total_correctivos'] != 1 ? 's' : '' ?></div>
-                        </div>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-                <?php endif; ?>
+            <div class="ch-card">
+                <div class="ch-title">🟢 Estado de Equipos</div>
+                <div class="ch-sub">Distribución actual por estado</div>
+                <div class="ch-wrap" style="height:260px"><canvas id="cEstados"></canvas></div>
             </div>
-
         </div>
 
-        <!-- ========================
-             SECCIÓN 3: BAJAS
-             ======================== -->
-        <div class="stats-section-title">📛 Análisis de Bajas</div>
-
-        <div class="charts-grid-2">
-
-            <!-- Bajas por área — barras -->
-            <div class="chart-card">
-                <div class="chart-card-title">📊 Bajas de Equipos por Área</div>
-                <div class="chart-card-sub">Áreas donde ocurren más bajas definitivas de equipos</div>
-                <?php if (empty($bajasPorArea)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">✅</span>No hay bajas registradas</div>
+        <!-- Sección 2: Mantenimientos -->
+        <div class="section-sep">🔧 Mantenimientos</div>
+        <div class="g1">
+            <div class="ch-card">
+                <div class="ch-title">📅 Mantenimientos por Mes — Últimos 12 meses</div>
+                <div class="ch-sub">Preventivos (verde) vs Correctivos (rojo) mes a mes</div>
+                <?php if (empty($porMes)): ?>
+                    <div class="no-data">No hay mantenimientos en los últimos 12 meses</div>
                 <?php else: ?>
-                <div class="chart-wrap" style="height:260px">
-                    <canvas id="chartBajasPorArea"></canvas>
-                </div>
+                <div class="ch-wrap" style="height:280px"><canvas id="cMes"></canvas></div>
                 <?php endif; ?>
             </div>
+        </div>
+        <div class="g1">
+            <div class="ch-card">
+                <div class="ch-title">🔩 Top 10 Equipos con más Mantenimientos</div>
+                <div class="ch-sub">Equipos que han requerido más intervenciones técnicas</div>
+                <?php if (empty($topEquipos)): ?>
+                    <div class="no-data">Sin mantenimientos registrados</div>
+                <?php else: ?>
+                <div class="ch-wrap" style="height:<?= max(200, count($topEquipos)*42) ?>px"><canvas id="cTop"></canvas></div>
+                <?php endif; ?>
+            </div>
+        </div>
 
-            <!-- Motivo de bajas — pastel -->
-            <div class="chart-card">
-                <div class="chart-card-title">🥧 Motivos de Baja</div>
-                <div class="chart-card-sub">Causas principales por las que se dan de baja los equipos</div>
-                <?php
-                try {
-                    $motivosBaja = $db->query("
-                        SELECT motivo_baja, COUNT(*) as total
-                        FROM Bajas
-                        GROUP BY motivo_baja
-                        ORDER BY total DESC
-                    ")->fetchAll();
-                } catch (Exception $e) { $motivosBaja = []; }
-                ?>
+        <!-- Sección 3: Bajas -->
+        <div class="section-sep">📛 Bajas de Equipos</div>
+        <div class="g2">
+            <div class="ch-card">
+                <div class="ch-title">🏫 Bajas por Área</div>
+                <div class="ch-sub">Áreas con mayor número de equipos dados de baja</div>
+                <?php if (empty($bajasPorArea) || array_sum(array_column($bajasPorArea,'total')) == 0): ?>
+                    <div class="no-data">📭 No hay bajas registradas aún</div>
+                <?php else: ?>
+                <div class="ch-wrap" style="height:260px"><canvas id="cBajasArea"></canvas></div>
+                <?php endif; ?>
+            </div>
+            <div class="ch-card">
+                <div class="ch-title">❓ Motivos de Baja</div>
+                <div class="ch-sub">Razones por las que se dieron de baja los equipos</div>
                 <?php if (empty($motivosBaja)): ?>
-                    <div class="empty-chart"><span style="font-size:32px">📛</span>No hay bajas registradas</div>
+                    <div class="no-data">📭 No hay bajas registradas aún</div>
                 <?php else: ?>
-                <div class="chart-wrap chart-wrap-pie" style="height:260px">
-                    <canvas id="chartMotivosBaja"></canvas>
-                </div>
+                <div class="ch-wrap" style="height:260px"><canvas id="cMotivos"></canvas></div>
                 <?php endif; ?>
             </div>
-
         </div>
 
     </main>
 </div>
 
 <script>
-// ============================================
-// Configuración global de Chart.js — tema oscuro
-// ============================================
-Chart.defaults.color          = '#8b949e';
-Chart.defaults.borderColor    = '#30363d';
-Chart.defaults.font.family    = "'DM Sans', sans-serif";
-Chart.defaults.font.size      = 12;
-Chart.defaults.plugins.legend.labels.padding     = 16;
+const D = <?= $chartData ?>;
+
+// Config global
+Chart.defaults.color       = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "DM Sans, sans-serif";
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
-Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 14;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
 
-const COLORES = [
-    '#58a6ff','#3fb950','#d29922','#f85149',
-    '#a371f7','#79c0ff','#ff9e64','#56d364',
-    '#ffa657','#ff7b72'
+const TIP = { backgroundColor:'#1c2333', borderColor:'#30363d', borderWidth:1, padding:10 };
+
+const PAL = [
+    'rgba(88,166,255,.8)','rgba(63,185,80,.8)','rgba(210,153,34,.8)',
+    'rgba(248,81,73,.8)','rgba(163,113,247,.8)','rgba(121,192,255,.8)',
+    'rgba(255,163,72,.8)','rgba(255,121,121,.8)','rgba(72,191,255,.8)','rgba(255,214,0,.8)'
 ];
+const PAL_BD = PAL.map(c => c.replace('.8)',  '1)'));
 
-function makeGradient(ctx, color) {
-    const g = ctx.createLinearGradient(0, 0, 0, 300);
-    g.addColorStop(0, color + 'cc');
-    g.addColorStop(1, color + '22');
-    return g;
+const scaleOpts = {
+    x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e'} },
+    y: { grid:{color:'#21262d'}, ticks:{color:'#8b949e', precision:0}, beginAtZero:true }
+};
+
+// 1. Equipos por Área (barra vertical)
+if (document.getElementById('cArea') && D.equiposPorArea.data.length)
+    new Chart(document.getElementById('cArea'), {
+        type: 'bar',
+        data: {
+            labels: D.equiposPorArea.labels,
+            datasets: [{ label:'Equipos', data: D.equiposPorArea.data,
+                backgroundColor: D.equiposPorArea.data.map((_,i)=>PAL[i%PAL.length]),
+                borderColor:     D.equiposPorArea.data.map((_,i)=>PAL_BD[i%PAL.length]),
+                borderWidth:1, borderRadius:6 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:TIP }, scales: scaleOpts }
+    });
+
+// 2. Estados Equipos (donut)
+if (document.getElementById('cEstados') && D.estados.data.length) {
+    const colMap = { 'Activo':'rgba(63,185,80,.85)', 'Inactivo':'rgba(139,148,158,.85)', 'En Reparacion':'rgba(210,153,34,.85)', 'Baja':'rgba(248,81,73,.85)' };
+    new Chart(document.getElementById('cEstados'), {
+        type: 'doughnut',
+        data: { labels: D.estados.labels, datasets:[{
+            data: D.estados.data,
+            backgroundColor: D.estados.labels.map(l => colMap[l] || PAL[0]),
+            borderColor:'#161b22', borderWidth:3
+        }]},
+        options: { responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{ legend:{position:'bottom'}, tooltip:TIP } }
+    });
 }
 
-// ============================================
-// 1. Equipos por Área — Barras verticales
-// ============================================
-<?php if (!empty($equiposPorArea)): ?>
-(function() {
-    const ctx  = document.getElementById('chartEquiposPorArea');
-    const labels = <?= jsonLabels($equiposPorArea, 'nombre_area') ?>;
-    const data   = <?= jsonValues($equiposPorArea, 'total') ?>;
-    const colors = labels.map((_,i) => COLORES[i % COLORES.length]);
-
-    new Chart(ctx, {
+// 3. Mantenimientos por Mes (barras apiladas + línea)
+if (document.getElementById('cMes') && D.porMes.labels.length)
+    new Chart(document.getElementById('cMes'), {
         type: 'bar',
         data: {
-            labels,
-            datasets: [{
-                label: 'Equipos',
-                data,
-                backgroundColor: colors.map(c => c + '99'),
-                borderColor: colors,
-                borderWidth: 2,
-                borderRadius: 6,
-                borderSkipped: false,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { color: '#21262d' }, ticks: { maxRotation: 30 } },
-                y: { grid: { color: '#21262d' }, beginAtZero: true, ticks: { stepSize: 1 } }
-            }
-        }
-    });
-})();
-<?php endif; ?>
-
-// ============================================
-// 2. Estado de Equipos — Dona
-// ============================================
-<?php if (!empty($estadoEquipos)): ?>
-(function() {
-    const ctx    = document.getElementById('chartEstadoEquipos');
-    const labels = <?= jsonLabels($estadoEquipos, 'estado') ?>;
-    const data   = <?= jsonValues($estadoEquipos, 'total') ?>;
-    const colors = ['#3fb950','#8b949e','#d29922','#f85149'];
-
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels,
-            datasets: [{ data, backgroundColor: colors, borderColor: '#161b22', borderWidth: 3, hoverOffset: 8 }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ` ${ctx.label}: ${ctx.raw} equipo${ctx.raw !== 1 ? 's' : ''}`
-                    }
-                }
-            }
-        }
-    });
-})();
-<?php endif; ?>
-
-// ============================================
-// 3. Mantenimientos por Mes — Barras agrupadas
-// ============================================
-<?php if (!empty($mttosPorMes)): ?>
-(function() {
-    const ctx    = document.getElementById('chartMttosPorMes');
-    const labels = <?= jsonLabels($mttosPorMes, 'mes_label') ?>;
-    const prev   = <?= jsonValues($mttosPorMes, 'preventivos') ?>;
-    const corr   = <?= jsonValues($mttosPorMes, 'correctivos') ?>;
-
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
+            labels: D.porMes.labels,
             datasets: [
-                {
-                    label: '🛡 Preventivos',
-                    data: prev,
-                    backgroundColor: '#3fb95099',
-                    borderColor: '#3fb950',
-                    borderWidth: 2,
-                    borderRadius: 5,
-                    borderSkipped: false,
-                },
-                {
-                    label: '🔨 Correctivos',
-                    data: corr,
-                    backgroundColor: '#f8514999',
-                    borderColor: '#f85149',
-                    borderWidth: 2,
-                    borderRadius: 5,
-                    borderSkipped: false,
-                }
+                { label:'🛡 Preventivos', data: D.porMes.preventivos, backgroundColor:'rgba(63,185,80,.75)', borderColor:'rgba(63,185,80,1)', borderWidth:1, borderRadius:4 },
+                { label:'🔨 Correctivos', data: D.porMes.correctivos, backgroundColor:'rgba(248,81,73,.75)',  borderColor:'rgba(248,81,73,1)',  borderWidth:1, borderRadius:4 },
+                { label:'📊 Total', data: D.porMes.total, type:'line',
+                  borderColor:'rgba(88,166,255,1)', backgroundColor:'rgba(88,166,255,.06)',
+                  borderWidth:2, pointBackgroundColor:'rgba(88,166,255,1)', pointRadius:4,
+                  fill:true, tension:0.3, yAxisID:'y' }
             ]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
-            },
+            responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:true, position:'top'}, tooltip:TIP },
             scales: {
-                x: { grid: { color: '#21262d' } },
-                y: { grid: { color: '#21262d' }, beginAtZero: true, ticks: { stepSize: 1 } }
+                x: { ...scaleOpts.x, stacked:true },
+                y: { ...scaleOpts.y, stacked:true }
             }
         }
     });
-})();
-<?php endif; ?>
 
-// ============================================
-// 4. Tipo de Mantenimiento — Pastel
-// ============================================
-<?php if (!empty($tipoMtto)): ?>
-(function() {
-    const ctx    = document.getElementById('chartTipoMtto');
-    const labels = <?= jsonLabels($tipoMtto, 'tipo_mantenimiento') ?>;
-    const data   = <?= jsonValues($tipoMtto, 'total') ?>;
-
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels,
-            datasets: [{
-                data,
-                backgroundColor: ['#3fb95099','#f8514999'],
-                borderColor:     ['#3fb950',  '#f85149'],
-                borderWidth: 2,
-                hoverOffset: 8
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => {
-                            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                            const pct   = total > 0 ? Math.round(ctx.raw/total*100) : 0;
-                            return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-})();
-<?php endif; ?>
-
-// ============================================
-// 5. Bajas por Área — Barras horizontales
-// ============================================
-<?php if (!empty($bajasPorArea)): ?>
-(function() {
-    const ctx    = document.getElementById('chartBajasPorArea');
-    const labels = <?= jsonLabels($bajasPorArea, 'nombre_area') ?>;
-    const data   = <?= jsonValues($bajasPorArea, 'total') ?>;
-
-    new Chart(ctx, {
+// 4. Top Equipos (barras horizontales apiladas)
+if (document.getElementById('cTop') && D.topEquipos.labels.length)
+    new Chart(document.getElementById('cTop'), {
         type: 'bar',
         data: {
-            labels,
-            datasets: [{
-                label: 'Bajas',
-                data,
-                backgroundColor: '#f8514999',
-                borderColor:     '#f85149',
-                borderWidth: 2,
-                borderRadius: 6,
-                borderSkipped: false,
-            }]
+            labels: D.topEquipos.labels,
+            datasets: [
+                { label:'🛡 Preventivos', data: D.topEquipos.preventivos, backgroundColor:'rgba(63,185,80,.75)', borderColor:'rgba(63,185,80,1)', borderWidth:1, borderRadius:4 },
+                { label:'🔨 Correctivos', data: D.topEquipos.correctivos, backgroundColor:'rgba(248,81,73,.75)',  borderColor:'rgba(248,81,73,1)',  borderWidth:1, borderRadius:4 }
+            ]
         },
         options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:true, position:'top'}, tooltip:TIP },
             scales: {
-                x: { grid: { color: '#21262d' }, beginAtZero: true, ticks: { stepSize: 1 } },
-                y: { grid: { color: '#21262d' } }
+                x: { ...scaleOpts.x, stacked:true, beginAtZero:true },
+                y: { grid:{color:'transparent'}, ticks:{color:'#8b949e'}, stacked:true }
             }
         }
     });
-})();
-<?php endif; ?>
 
-// ============================================
-// 6. Motivos de Baja — Pastel
-// ============================================
-<?php if (!empty($motivosBaja)): ?>
-(function() {
-    const ctx    = document.getElementById('chartMotivosBaja');
-    const labels = <?= jsonLabels($motivosBaja, 'motivo_baja') ?>;
-    const data   = <?= jsonValues($motivosBaja, 'total') ?>;
-    const colors = COLORES.slice(0, labels.length);
-
-    new Chart(ctx, {
+// 5. Bajas por Área (pie)
+if (document.getElementById('cBajasArea') && D.bajasPorArea.data.some(v=>v>0))
+    new Chart(document.getElementById('cBajasArea'), {
         type: 'pie',
-        data: {
-            labels,
-            datasets: [{
-                data,
-                backgroundColor: colors.map(c => c + '99'),
-                borderColor:     colors,
-                borderWidth: 2,
-                hoverOffset: 8
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => {
-                            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                            const pct   = total > 0 ? Math.round(ctx.raw/total*100) : 0;
-                            return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
-                        }
-                    }
-                }
-            }
-        }
+        data: { labels: D.bajasPorArea.labels, datasets:[{ data: D.bajasPorArea.data, backgroundColor: PAL, borderColor:'#161b22', borderWidth:3 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom'}, tooltip:TIP } }
     });
-})();
-<?php endif; ?>
+
+// 6. Motivos de Baja (donut)
+if (document.getElementById('cMotivos') && D.motivosBaja.data.length)
+    new Chart(document.getElementById('cMotivos'), {
+        type: 'doughnut',
+        data: { labels: D.motivosBaja.labels, datasets:[{ data: D.motivosBaja.data,
+            backgroundColor:['rgba(248,81,73,.8)','rgba(210,153,34,.8)','rgba(163,113,247,.8)','rgba(88,166,255,.8)','rgba(63,185,80,.8)','rgba(255,163,72,.8)'],
+            borderColor:'#161b22', borderWidth:3 }] },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{ legend:{position:'bottom'}, tooltip:TIP } }
+    });
 </script>
 </body>
 </html>
