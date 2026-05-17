@@ -6,7 +6,7 @@
 
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
-define('DB_PASS', '2004');  // <-- Cambia esto
+define('DB_PASS', '');  // <-- Cambia esto
 define('DB_NAME', 'sistema_mantenimiento');
 define('SITE_NAME', 'Gestión de Mantenimiento');
 date_default_timezone_set('America/Mexico_City');
