@@ -131,8 +131,8 @@ CREATE TABLE IF NOT EXISTS SolicitudesRol (
  
 -- El primer usuario registrado lo puedes hacer admin manualmente:
 -- UPDATE Usuarios SET rol='admin' WHERE id_usuario = 1;
- 
-
+-- para volverte admin
+UPDATE Usuarios SET rol='admin' WHERE id_usuario = 1;
 -- =============================================
 -- DATOS DE EJEMPLO (opcional, puedes borrarlos)
 -- =============================================
