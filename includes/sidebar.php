@@ -25,7 +25,7 @@ function navLink(string $page, string $icon, string $label, string $current): st
     <div class="sidebar-brand">
         <div class="brand-icon">🖥</div>
         <div class="brand-text">
-            <span class="brand-name">ManteTech</span>
+            <span class="brand-name">TechCare</span>
             <span class="brand-sub">Sistema de Gestión</span>
         </div>
     </div>

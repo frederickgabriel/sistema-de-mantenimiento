@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-left">
         <div class="login-grid-bg"></div>
         <div class="login-logo">🖥</div>
-        <div class="login-brand">ManteTech</div>
+        <div class="login-brand">TechCare</div>
         <p class="login-tagline">Sistema institucional para la gestión y seguimiento del mantenimiento de equipos de cómputo.</p>
         <div style="margin-top:40px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center">
             <div style="text-align:center"><div style="font-family:var(--font-mono);font-size:28px;color:var(--accent)">45+</div><div style="font-size:12px;color:var(--text-muted)">Equipos</div></div>
