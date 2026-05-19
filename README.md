@@ -1,6 +1,6 @@
 <!-- http://sistema-mantenimiento.test/index.php -->
 
-# 🖥 Sistema de Gestión de Mantenimiento — ManteTech
+# 🖥 Sistema de Gestión de Mantenimiento — TechCare
 
 Sistema completo en **PHP + MySQL + HTML/CSS** para gestionar mantenimiento de equipos de cómputo.
 
