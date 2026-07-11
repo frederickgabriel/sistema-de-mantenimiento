@@ -60,29 +60,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión de Mantenimiento</title>
-    <link rel="stylesheet" href="/css/estilos.css">
+    <title>Zilara TechCare — Acceso al Sistema</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
+    <link rel="stylesheet" href="/css/estilos.css?v=5">
 </head>
 <body>
 
 <div class="login-wrapper">
 
-    <!-- Panel izquierdo decorativo -->
+    <!-- Panel izquierdo: Logo Zilara TechCare -->
     <div class="login-left">
-        <div class="login-grid-bg"></div>
-        <div class="login-logo">🖥</div>
-        <div class="login-brand">ManteTech</div>
-        <p class="login-tagline">
-            Sistema institucional para la gestión y seguimiento del mantenimiento de equipos de cómputo.
-        </p>
-        <div style="margin-top:40px; display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
-            <div style="text-align:center;"><div style="font-family:var(--font-mono);font-size:28px;color:var(--accent);">45+</div><div style="font-size:12px;color:var(--text-muted);">Equipos</div></div>
-            <div style="text-align:center;"><div style="font-family:var(--font-mono);font-size:28px;color:var(--success);">100%</div><div style="font-size:12px;color:var(--text-muted);">Trazabilidad</div></div>
-            <div style="text-align:center;"><div style="font-family:var(--font-mono);font-size:28px;color:var(--warning);">24/7</div><div style="font-size:12px;color:var(--text-muted);">Alertas</div></div>
-        </div>
+        <img src="img/hytta.png" alt="Zilara TechCare" class="login-logo-img">
+        <p class="login-tagline">Sistema de Administración y Seguimiento<br>del Mantenimiento de Equipos de Cómputo</p>
+        <div class="login-hotel">Hyatt Zilara</div>
+        <div class="login-hotel-sub">Riviera Maya</div>
     </div>
 
-    <!-- Panel derecho: formulario -->
+    <!-- Panel derecho: Formulario -->
     <div class="login-right">
         <div class="login-card">
             <h2>Bienvenido al sistema</h2>
@@ -95,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="alert alert-success"><?= e($success) ?></div>
             <?php endif; ?>
 
-            <div class="tab-nav" id="tabNav">
+            <div class="tab-nav">
                 <button class="tab-btn <?= $tab === 'login' ? 'active' : '' ?>" onclick="switchTab('login')">Iniciar Sesión</button>
                 <button class="tab-btn <?= $tab === 'registro' ? 'active' : '' ?>" onclick="switchTab('registro')">Registrarse</button>
             </div>
@@ -105,19 +102,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form method="POST" action="/index.php">
                     <input type="hidden" name="action" value="login">
                     <div class="form-group">
-                        <label for="loginCorreo">Correo Electrónico</label>
-                        <input type="email" id="loginCorreo" name="correo"
+                        <label>Correo Electrónico</label>
+                        <input type="email" name="correo"
                                value="<?= $tab === 'login' ? e($_POST['correo'] ?? '') : '' ?>"
                                placeholder="usuario@correo.com" required autofocus>
                     </div>
                     <div class="form-group">
-                        <label for="loginPass">Contraseña</label>
+                        <label>Contraseña</label>
                         <div class="input-group">
                             <input type="password" id="loginPass" name="password" placeholder="••••••••" required>
-                            <button type="button" class="toggle-pass" onclick="togglePass('loginPass', this)">👁</button>
+                            <button type="button" class="toggle-pass" onclick="togglePass('loginPass', this)"><span class="material-symbols-outlined mi-sm">visibility</span></button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full">Ingresar al Sistema</button>
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px">
+                        Ingresar al Sistema
+                    </button>
                 </form>
             </div>
 
@@ -127,30 +126,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="hidden" name="action" value="registro">
                     <div class="form-group">
                         <label>Nombre Completo *</label>
-                        <input type="text" name="nombre" value="<?= e($_POST['nombre'] ?? '') ?>" placeholder="Ej: Juan Pérez López" required>
+                        <input type="text" name="nombre"
+                               value="<?= e($_POST['nombre'] ?? '') ?>"
+                               placeholder="Ej: Juan Pérez López" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Cargo *</label>
-                            <input type="text" name="cargo" value="<?= e($_POST['cargo'] ?? '') ?>" placeholder="Técnico, Admin..." required>
+                            <input type="text" name="cargo"
+                                   value="<?= e($_POST['cargo'] ?? '') ?>"
+                                   placeholder="Técnico, Admin..." required>
                         </div>
                         <div class="form-group">
                             <label>Edad</label>
-                            <input type="number" name="edad" value="<?= e($_POST['edad'] ?? '') ?>" min="15" max="99" placeholder="25">
+                            <input type="number" name="edad"
+                                   value="<?= e($_POST['edad'] ?? '') ?>"
+                                   min="15" max="99" placeholder="25">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Correo Electrónico *</label>
-                        <input type="email" name="correo" value="<?= e($_POST['correo'] ?? '') ?>" placeholder="correo@ejemplo.com" required>
+                        <input type="email" name="correo"
+                               value="<?= e($_POST['correo'] ?? '') ?>"
+                               placeholder="correo@ejemplo.com" required>
                     </div>
                     <div class="form-group">
                         <label>Contraseña * (mínimo 6 caracteres)</label>
                         <div class="input-group">
                             <input type="password" id="regPass" name="password" placeholder="••••••••" required>
-                            <button type="button" class="toggle-pass" onclick="togglePass('regPass', this)">👁</button>
+                            <button type="button" class="toggle-pass" onclick="togglePass('regPass', this)"><span class="material-symbols-outlined mi-sm">visibility</span></button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success btn-full">Crear Cuenta</button>
+                    <button type="submit" class="btn btn-success btn-full" style="margin-top:8px">
+                        Crear cuenta
+                    </button>
                 </form>
             </div>
 
@@ -168,7 +177,7 @@ function switchTab(name) {
 function togglePass(id, btn) {
     const input = document.getElementById(id);
     input.type  = input.type === 'password' ? 'text' : 'password';
-    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+    btn.querySelector('span').textContent = input.type === 'password' ? 'visibility' : 'visibility_off';
 }
 </script>
 

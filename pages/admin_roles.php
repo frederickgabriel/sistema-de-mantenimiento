@@ -103,6 +103,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
     <style>
         .solicitud-card {
@@ -186,13 +187,13 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
 
         <div class="page-header">
             <div>
-                <div class="page-title">👑 Gestión de Roles</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">admin_panel_settings</span> Gestión de Roles</div>
                 <div class="page-subtitle">Administra permisos y solicitudes de acceso</div>
             </div>
         </div>
 
         <?php if ($msg): ?>
-            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🚫') ? 'alert-warning' : 'alert-error') ?>"><?= e($msg) ?></div>
+            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🚫') ? 'alert-warning' : 'alert-error') ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
         <!-- Stats -->
@@ -229,15 +230,15 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             <div>
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">📨 Solicitudes de Rol Admin</div>
+                        <div class="card-title"><span class="material-symbols-outlined mi-md">mail</span> Solicitudes de Rol Admin</div>
                         <?php if ($totalPend > 0): ?>
-                            <span class="badge-estado badge-reparacion">⏳ <?= $totalPend ?> pendiente(s)</span>
+                            <span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">hourglass_empty</span> <?= $totalPend ?> pendiente(s)</span>
                         <?php endif; ?>
                     </div>
                     <div style="padding:16px">
                         <?php if (empty($solicitudes)): ?>
                             <div class="empty-state" style="padding:32px 0">
-                                <span class="empty-icon" style="font-size:36px">📭</span>
+                                <span class="empty-icon material-symbols-outlined" style="font-size:36px">inbox</span>
                                 <p>No hay solicitudes aún.</p>
                             </div>
                         <?php else: ?>
@@ -247,7 +248,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                             <div class="solicitud-card <?= $claseCard ?>">
                                 <div class="sol-header">
                                     <div>
-                                        <div class="sol-nombre">👤 <?= e($s['nombre']) ?></div>
+                                        <div class="sol-nombre"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">person</span> <?= e($s['nombre']) ?></div>
                                         <div class="sol-meta"><?= e($s['cargo']) ?> · <?= e($s['correo']) ?></div>
                                         <div class="sol-meta">Solicitado: <?= fechaES(date('Y-m-d', strtotime($s['fecha_solicitud']))) ?></div>
                                     </div>
@@ -259,7 +260,10 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                         default     => 'badge-inactivo'
                                     };
                                     $bi = match($s['estado']) {
-                                        'Pendiente' => '⏳', 'Aprobada' => '✅', 'Rechazada' => '❌', default => ''
+                                        'Pendiente' => '<span class="material-symbols-outlined mi-sm">hourglass_empty</span>',
+                                        'Aprobada'  => '<span class="material-symbols-outlined mi-sm">check_circle</span>',
+                                        'Rechazada' => '<span class="material-symbols-outlined mi-sm">cancel</span>',
+                                        default     => ''
                                     };
                                     ?>
                                     <span class="badge-estado <?= $bc ?>"><?= $bi ?> <?= e($s['estado']) ?></span>
@@ -287,11 +291,11 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                         <div style="display:flex;gap:8px">
                                             <button type="submit" class="btn btn-success btn-sm" style="flex:1"
                                                 onclick="document.getElementById('action_<?= $s['id_solicitud'] ?>').value='aprobar'">
-                                                ✅ Aprobar Solicitud
+                                                <span class="material-symbols-outlined mi-sm">check_circle</span> Aprobar Solicitud
                                             </button>
                                             <button type="submit" class="btn btn-danger btn-sm" style="flex:1"
                                                 onclick="document.getElementById('action_<?= $s['id_solicitud'] ?>').value='rechazar'">
-                                                ❌ Rechazar Solicitud
+                                                <span class="material-symbols-outlined mi-sm">cancel</span> Rechazar Solicitud
                                             </button>
                                         </div>
                                     </form>
@@ -319,7 +323,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             <div>
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">👥 Usuarios del Sistema</div>
+                        <div class="card-title"><span class="material-symbols-outlined mi-md">group</span> Usuarios del Sistema</div>
                         <span class="text-muted" style="font-size:12px"><?= $totalUsuarios ?> usuarios</span>
                     </div>
                     <div>
@@ -335,7 +339,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                 </div>
                                 <div class="user-cargo"><?= e($u['cargo']) ?> · <?= e($u['correo']) ?></div>
                                 <div class="user-cargo" style="margin-top:2px">
-                                    🔧 <?= $u['total_mttos'] ?> mttos · 📋 <?= $u['total_tareas'] ?> tareas
+                                    <span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">build</span> <?= $u['total_mttos'] ?> mttos · <span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">checklist</span> <?= $u['total_tareas'] ?> tareas
                                 </div>
                             </div>
                             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
@@ -345,13 +349,13 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                         <form method="POST" onsubmit="return confirm('¿Dar rol Admin a <?= e($u['nombre']) ?>?')">
                                             <input type="hidden" name="action" value="dar_admin">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
-                                            <button class="btn btn-ghost btn-sm" style="font-size:11px">👑 Dar Admin</button>
+                                            <button class="btn btn-ghost btn-sm" style="font-size:11px"><span class="material-symbols-outlined mi-xs">admin_panel_settings</span> Dar Admin</button>
                                         </form>
                                     <?php else: ?>
                                         <form method="POST" onsubmit="return confirm('¿Quitar rol Admin a <?= e($u['nombre']) ?>?')">
                                             <input type="hidden" name="action" value="quitar_admin">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
-                                            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)">↩ Quitar Admin</button>
+                                            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)"><span class="material-symbols-outlined mi-xs">undo</span> Quitar Admin</button>
                                         </form>
                                     <?php endif; ?>
                                 <?php endif; ?>
@@ -364,12 +368,12 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                 <!-- Tabla de permisos -->
                 <div class="card" style="margin-top:20px">
                     <div class="card-header">
-                        <div class="card-title">🔐 Tabla de Permisos</div>
+                        <div class="card-title"><span class="material-symbols-outlined mi-md">lock</span> Tabla de Permisos</div>
                     </div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
-                                <tr><th>Acción</th><th style="text-align:center">👑 Admin</th><th style="text-align:center">👤 Usuario</th></tr>
+                                <tr><th>Acción</th><th style="text-align:center"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">admin_panel_settings</span> Admin</th><th style="text-align:center"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">person</span> Usuario</th></tr>
                             </thead>
                             <tbody>
                                 <?php
@@ -391,8 +395,8 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                 ?>
                                 <tr>
                                     <td style="font-size:13px"><?= $accion ?></td>
-                                    <td style="text-align:center"><?= $admin   ? '<span style="color:var(--success)">✅</span>' : '<span style="color:var(--danger)">❌</span>' ?></td>
-                                    <td style="text-align:center"><?= $usuario ? '<span style="color:var(--success)">✅</span>' : '<span style="color:var(--danger)">❌</span>' ?></td>
+                                    <td style="text-align:center"><?= $admin   ? '<span class="material-symbols-outlined mi-sm" style="color:var(--success)">check_circle</span>' : '<span class="material-symbols-outlined mi-sm" style="color:var(--danger)">cancel</span>' ?></td>
+                                    <td style="text-align:center"><?= $usuario ? '<span class="material-symbols-outlined mi-sm" style="color:var(--success)">check_circle</span>' : '<span class="material-symbols-outlined mi-sm" style="color:var(--danger)">cancel</span>' ?></td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>

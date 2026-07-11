@@ -61,10 +61,21 @@ if ($generarPDF):
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Mantenimiento — <?= date('d/m/Y') ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; color: #1a1a2e; font-size: 13px; background: #fff; }
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal; font-style: normal; line-height: 1;
+            letter-spacing: normal; text-transform: none; display: inline-block;
+            white-space: nowrap; word-wrap: normal; direction: ltr;
+            -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased; vertical-align: middle;
+        }
+        .mi-sm { font-size: 16px; }
+        .mi-md { font-size: 20px; }
         .report-header { background: #004085; color: #fff; padding: 28px 40px; display: flex; justify-content: space-between; align-items: center; }
         .report-title { font-size: 22px; font-weight: 700; }
         .report-sub { font-size: 13px; opacity: 0.8; margin-top: 4px; }
@@ -98,14 +109,14 @@ if ($generarPDF):
 <body>
 
 <div class="no-print" style="background:#f0f4ff;padding:12px 40px;display:flex;gap:12px;align-items:center">
-    <button onclick="window.print()" style="background:#004085;color:#fff;border:none;padding:10px 22px;border-radius:6px;cursor:pointer;font-size:14px">🖨 Imprimir / Guardar PDF</button>
-    <a href="/pages/reportes.php" style="color:#004085;font-size:14px">← Volver al sistema</a>
-    <span style="color:#666;font-size:13px">Usa Ctrl+P → Guardar como PDF en tu navegador</span>
+    <button onclick="window.print()" style="background:#004085;color:#fff;border:none;padding:10px 22px;border-radius:6px;cursor:pointer;font-size:14px"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">print</span> Imprimir / Guardar PDF</button>
+    <a href="/pages/reportes.php" style="color:#004085;font-size:14px"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">arrow_back</span> Volver al sistema</a>
+    <span style="color:#666;font-size:13px">Usa Ctrl+P <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">arrow_forward</span> Guardar como PDF en tu navegador</span>
 </div>
 
 <div class="report-header">
     <div>
-        <div class="report-title">🖥 Reporte de Mantenimiento de Equipos</div>
+        <div class="report-title"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">computer</span> Reporte de Mantenimiento de Equipos</div>
         <div class="report-sub">Sistema Institucional de Gestión de Cómputo</div>
     </div>
     <div class="report-date">
@@ -132,7 +143,7 @@ if ($generarPDF):
 
 <?php if (!empty($urgentes)): ?>
 <div class="section" style="padding-top:0">
-    <div class="section-title">⚠ Equipos con Mantenimiento Próximo o Vencido (30 días)</div>
+    <div class="section-title"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">warning</span> Equipos con Mantenimiento Próximo o Vencido (30 días)</div>
     <table>
         <thead><tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Próx. Mantenimiento</th><th>Estado</th></tr></thead>
         <tbody>
@@ -205,6 +216,7 @@ endif;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reportes — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
 </head>
 <body>
@@ -215,11 +227,11 @@ endif;
 
         <div class="page-header">
             <div>
-                <div class="page-title">📊 Reportes</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">bar_chart</span> Reportes</div>
                 <div class="page-subtitle">Vista previa y descarga de reportes en PDF</div>
             </div>
             <div class="page-actions">
-                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary">📥 Generar Reporte PDF</a>
+                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">download</span> Generar Reporte PDF</a>
             </div>
         </div>
 
@@ -249,7 +261,7 @@ endif;
         <?php if (!empty($urgentes)): ?>
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
-                <div class="card-title">⚠ Equipos con Mantenimiento Próximo o Vencido</div>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">warning</span> Equipos con Mantenimiento Próximo o Vencido</div>
             </div>
             <div class="table-wrapper">
                 <table>
@@ -266,9 +278,9 @@ endif;
                             <?php if ($dias < 0): ?>
                                 <span class="badge-estado badge-no-realizado">Vencido <?= abs($dias) ?>d</span>
                             <?php elseif ($dias <= 7): ?>
-                                <span class="badge-estado badge-reparacion">⚠ <?= $dias ?>d</span>
+                                <span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">warning</span> <?= $dias ?>d</span>
                             <?php else: ?>
-                                <span class="badge-estado badge-proceso">📅 <?= $dias ?>d</span>
+                                <span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">calendar_month</span> <?= $dias ?>d</span>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -282,12 +294,12 @@ endif;
         <!-- Vista previa del historial -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">📋 Vista Previa — Últimos Mantenimientos</div>
-                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF completo</a>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Vista Previa — Últimos Mantenimientos</div>
+                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary btn-sm"><span class="material-symbols-outlined mi-sm">download</span> Descargar PDF completo</a>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($mantenimientos)): ?>
-                    <div class="empty-state"><span class="empty-icon">📋</span><p>Sin registros aún.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">checklist</span><p>Sin registros aún.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -301,8 +313,8 @@ endif;
                         <td class="text-secondary"><?= e($m['nombre_area'] ?? '—') ?></td>
                         <td>
                             <?= $m['tipo_mantenimiento'] === 'Preventivo'
-                                ? '<span class="badge-estado badge-proceso">🛡 Preventivo</span>'
-                                : '<span class="badge-estado badge-reparacion">🔨 Correctivo</span>' ?>
+                                ? '<span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">shield</span> Preventivo</span>'
+                                : '<span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">handyman</span> Correctivo</span>' ?>
                         </td>
                         <td class="text-secondary"><?= fechaES($m['fecha_realizacion']) ?></td>
                         <td><?php

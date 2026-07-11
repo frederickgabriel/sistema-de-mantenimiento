@@ -6,7 +6,7 @@
 
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
-define('DB_PASS', '');  // <-- Cambia esto
+define('DB_PASS', '2004');  // <-- Cambia esto
 define('DB_NAME', 'sistema_mantenimiento');
 define('SITE_NAME', 'Gestión de Mantenimiento');
 date_default_timezone_set('America/Mexico_City');
@@ -22,7 +22,7 @@ function getDB(): PDO {
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } catch (PDOException $e) {
-            die('<div style="font-family:sans-serif;padding:40px;color:#f85149;background:#0d1117">Error de conexión a la base de datos: ' . $e->getMessage() . '</div>');
+            die('<div style="font-family:sans-serif;padding:40px;color:#cf222e;background:#f5f6fa">Error de conexión a la base de datos: ' . $e->getMessage() . '</div>');
         }
     }
     return $pdo;
@@ -49,6 +49,19 @@ function redirectIfLoggedIn(): void {
 function e(mixed $val): string {
     return htmlspecialchars((string)$val, ENT_QUOTES, 'UTF-8');
 }
+
+// Renderiza un mensaje flash ($msg/$err) sustituyendo su emoji inicial por un ícono Material Symbols
+function renderMsg(?string $msg): string {
+    if (!$msg) return '';
+    $map = ['✅' => 'check_circle', '❌' => 'cancel', '🚫' => 'block', '🗑' => 'delete', '⚠' => 'warning'];
+    foreach ($map as $emoji => $icon) {
+        if (str_starts_with($msg, $emoji)) {
+            $resto = trim(mb_substr($msg, mb_strlen($emoji)));
+            return '<span class="material-symbols-outlined mi-sm">' . $icon . '</span> ' . e($resto);
+        }
+    }
+    return e($msg);
+}
  
 function fechaES(?string $fecha): string {
     if (!$fecha) return '—';
@@ -65,10 +78,11 @@ function badgeEstado(string $estado): string {
  
 function badgeTarea(string $estado): string {
     $map   = ['Pendiente' => 'badge-pendiente', 'En Proceso' => 'badge-proceso', 'Realizado' => 'badge-realizado', 'No Realizado' => 'badge-no-realizado'];
-    $icons = ['Pendiente' => '⏳', 'En Proceso' => '🔄', 'Realizado' => '✅', 'No Realizado' => '❌'];
+    $icons = ['Pendiente' => 'hourglass_empty', 'En Proceso' => 'autorenew', 'Realizado' => 'check_circle', 'No Realizado' => 'cancel'];
     $css   = $map[$estado]   ?? 'badge-pendiente';
     $ico   = $icons[$estado] ?? '';
-    return "<span class=\"badge-estado {$css}\">{$ico} " . e($estado) . "</span>";
+    $icoHtml = $ico ? "<span class=\"material-symbols-outlined mi-xs\">{$ico}</span> " : '';
+    return "<span class=\"badge-estado {$css}\">{$icoHtml}" . e($estado) . "</span>";
 }
  
 // =============================================
@@ -93,9 +107,9 @@ function requireAdmin(): void {
 // Badge de rol
 function badgeRol(string $rol): string {
     if ($rol === 'admin') {
-        return '<span class="badge-estado" style="background:rgba(163,113,247,.15);color:var(--purple);border:1px solid rgba(163,113,247,.3)">👑 Admin</span>';
+        return '<span class="badge-estado" style="background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.35)"><span class="material-symbols-outlined mi-xs">admin_panel_settings</span> Admin</span>';
     }
-    return '<span class="badge-estado badge-inactivo">👤 Usuario</span>';
+    return '<span class="badge-estado badge-inactivo"><span class="material-symbols-outlined mi-xs">person</span> Usuario</span>';
 }
  
 // Enviar email de solicitud de rol (usa mail() nativo de PHP)

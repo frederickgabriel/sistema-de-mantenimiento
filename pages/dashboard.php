@@ -44,6 +44,7 @@ $tareasRecientes = $db->query("
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
 </head>
 <body>
@@ -52,15 +53,15 @@ $tareasRecientes = $db->query("
     <main class="main-content">
         <div class="page-header">
             <div><div class="page-title">Panel de Control</div><div class="page-subtitle">Resumen del sistema — <?= date('d \d\e F \d\e Y') ?></div></div>
-            <div class="page-actions"><a href="/pages/reportes.php" class="btn btn-ghost">📊 Descargar Reporte PDF</a></div>
+            <div class="page-actions"><a href="/pages/reportes.php" class="btn btn-ghost"><span class="material-symbols-outlined mi-sm">bar_chart</span> Descargar Reporte PDF</a></div>
         </div>
 
         <!-- Aviso solicitudes de rol pendientes (solo admin) -->
         <?php if (esAdmin()):
             $solPend = getDB()->query("SELECT COUNT(*) FROM SolicitudesRol WHERE estado='Pendiente'")->fetchColumn();
             if ($solPend > 0): ?>
-        <div class="alerta-urgente" style="border-color:rgba(163,113,247,.3);background:rgba(163,113,247,.08);margin-bottom:16px">
-            <div class="alerta-icon">👑</div>
+        <div class="alerta-urgente" style="border-color:rgba(139,92,246,.35);background:rgba(139,92,246,.07);margin-bottom:16px">
+            <div class="alerta-icon material-symbols-outlined">admin_panel_settings</div>
             <div>
                 <div class="alerta-title" style="color:var(--purple)">
                     <?= $solPend ?> solicitud<?= $solPend > 1 ? 'es' : '' ?> de rol Admin pendiente<?= $solPend > 1 ? 's' : '' ?> de revisión
@@ -70,16 +71,16 @@ $tareasRecientes = $db->query("
                 </div>
             </div>
             <div style="margin-left:auto;flex-shrink:0">
-                <a href="/pages/admin_roles.php" class="btn btn-ghost btn-sm" style="border-color:rgba(163,113,247,.4);color:var(--purple)">Ver solicitudes →</a>
+                <a href="/pages/admin_roles.php" class="btn btn-ghost btn-sm" style="border-color:rgba(139,92,246,.45);color:var(--purple)">Ver solicitudes <span class="material-symbols-outlined mi-sm">arrow_forward</span></a>
             </div>
         </div>
         <?php endif; endif; ?>
 
         <?php if (count($urgentes) > 0): ?>
         <div class="alerta-urgente">
-            <div class="alerta-icon">🔔</div>
+            <div class="alerta-icon material-symbols-outlined">notifications</div>
             <div>
-                <div class="alerta-title">⚠ Equipos con mantenimiento pendiente o urgente</div>
+                <div class="alerta-title"><span class="material-symbols-outlined mi-md">warning</span> Equipos con mantenimiento pendiente o urgente</div>
                 <ul class="alerta-list">
                     <?php foreach ($urgentes as $u): ?>
                     <li><strong><?= e($u['numero_inventario']) ?></strong> — <?= e($u['modelo']) ?> (<?= e($u['nombre_area'] ?? 'Sin área') ?>):
@@ -96,13 +97,13 @@ $tareasRecientes = $db->query("
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-label">Total Equipos</div><div class="stat-value accent"><?= $totalEquipos ?></div><div class="stat-meta"><?= $equiposActivos ?> activos · <?= $equiposRep ?> en reparación</div></div>
             <div class="stat-card"><div class="stat-label">Mantenimientos Hoy</div><div class="stat-value warning"><?= $mttosHoy ?></div><div class="stat-meta"><?= $totalMttos ?> total histórico</div></div>
-            <div class="stat-card"><div class="stat-label">Tareas Pendientes</div><div class="stat-value danger"><?= $pendientes ?></div><div class="stat-meta"><a href="/pages/tareas.php">Ver todas →</a></div></div>
-            <div class="stat-card"><div class="stat-label">Áreas / Salones</div><div class="stat-value success"><?= $totalAreas ?></div><div class="stat-meta"><a href="/pages/equipos.php">Gestionar →</a></div></div>
+            <div class="stat-card"><div class="stat-label">Tareas Pendientes</div><div class="stat-value danger"><?= $pendientes ?></div><div class="stat-meta"><a href="/pages/tareas.php">Ver todas <span class="material-symbols-outlined mi-sm">arrow_forward</span></a></div></div>
+            <div class="stat-card"><div class="stat-label">Áreas / Salones</div><div class="stat-value success"><?= $totalAreas ?></div><div class="stat-meta"><a href="/pages/equipos.php">Gestionar <span class="material-symbols-outlined mi-sm">arrow_forward</span></a></div></div>
         </div>
 
         <div class="grid-2">
             <div class="card">
-                <div class="card-header"><div class="card-title">📈 Distribución de Equipos</div></div>
+                <div class="card-header"><div class="card-title"><span class="material-symbols-outlined mi-md">monitoring</span> Distribución de Equipos</div></div>
                 <div class="card-body">
                     <?php $totalEq = max($totalEquipos,1); $totalMt = max($totalMttos,1); ?>
                     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:10px">Estado de Equipos (total: <?= $totalEquipos ?>)</p>
@@ -118,10 +119,10 @@ $tareasRecientes = $db->query("
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><div class="card-title">📋 Tareas Recientes</div><a href="/pages/tareas.php" class="btn btn-ghost btn-sm">Ver todas</a></div>
+                <div class="card-header"><div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Tareas Recientes</div><a href="/pages/tareas.php" class="btn btn-ghost btn-sm">Ver todas</a></div>
                 <div class="card-body" style="padding:0">
                     <?php if (empty($tareasRecientes)): ?>
-                        <div class="empty-state"><span class="empty-icon">📭</span><p>Sin tareas.</p></div>
+                        <div class="empty-state"><span class="empty-icon material-symbols-outlined">inbox</span><p>Sin tareas.</p></div>
                     <?php else: ?>
                     <table><thead><tr><th>Tarea</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
                     <?php foreach ($tareasRecientes as $t): ?>
@@ -134,10 +135,10 @@ $tareasRecientes = $db->query("
         </div>
 
         <div class="card">
-            <div class="card-header"><div class="card-title">🔧 Últimos Mantenimientos</div><a href="/pages/mantenimientos.php" class="btn btn-ghost btn-sm">Ver historial completo</a></div>
+            <div class="card-header"><div class="card-title"><span class="material-symbols-outlined mi-md">build</span> Últimos Mantenimientos</div><a href="/pages/mantenimientos.php" class="btn btn-ghost btn-sm">Ver historial completo</a></div>
             <div class="table-wrapper">
                 <?php if (empty($ultimos)): ?>
-                    <div class="empty-state"><span class="empty-icon">🔧</span><p>Sin mantenimientos aún.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">build</span><p>Sin mantenimientos aún.</p></div>
                 <?php else: ?>
                 <table><thead><tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha</th><th>Próx. Mantenimiento</th></tr></thead><tbody>
                 <?php foreach ($ultimos as $m): ?>
@@ -145,7 +146,7 @@ $tareasRecientes = $db->query("
                     <td class="text-mono"><?= e($m['numero_inventario']) ?></td>
                     <td><?= e($m['modelo']) ?></td>
                     <td class="text-secondary"><?= e($m['nombre_area'] ?? '—') ?></td>
-                    <td><?= $m['tipo_mantenimiento']==='Preventivo' ? '<span class="badge-estado badge-proceso">🛡 Preventivo</span>' : '<span class="badge-estado badge-reparacion">🔨 Correctivo</span>' ?></td>
+                    <td><?= $m['tipo_mantenimiento']==='Preventivo' ? '<span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">shield</span> Preventivo</span>' : '<span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">handyman</span> Correctivo</span>' ?></td>
                     <td class="text-secondary"><?= fechaES($m['fecha_realizacion']) ?></td>
                     <td><?php
                         if ($m['proximo_mantenimiento']) {
@@ -164,5 +165,6 @@ $tareasRecientes = $db->query("
         </div>
     </main>
 </div>
+<script src="/js/countup.js"></script>
 </body>
 </html>

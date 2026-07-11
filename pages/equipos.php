@@ -79,6 +79,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
 </head>
 <body>
@@ -88,7 +89,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 
         <div class="page-header">
             <div>
-                <div class="page-title">🖥 Equipos y Áreas</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">computer</span> Equipos y Áreas</div>
                 <div class="page-subtitle">Inventario y gestión de salas de cómputo</div>
             </div>
             <?php if (esAdmin()): ?>
@@ -100,24 +101,24 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         </div>
 
         <?php if ($msg): ?>
-            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= e($msg) ?></div>
+            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
         <?php if (!esAdmin()): ?>
         <div class="alert alert-info">
-            👤 Modo <strong>Solo Lectura</strong> — Solo puedes ver el inventario. Contacta al administrador para registrar cambios.
+            <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">person</span> Modo <strong>Solo Lectura</strong> — Solo puedes ver el inventario. Contacta al administrador para registrar cambios.
         </div>
         <?php endif; ?>
 
         <!-- ÁREAS -->
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
-                <div class="card-title">🏫 Áreas / Salones Registrados</div>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Áreas / Salones Registrados</div>
                 <span class="text-muted" style="font-size:13px"><?= count($areas) ?> áreas</span>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($areas)): ?>
-                    <div class="empty-state"><span class="empty-icon">🏫</span><p>No hay áreas registradas.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">meeting_room</span><p>No hay áreas registradas.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -138,7 +139,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                             <form method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar esta área?')">
                                 <input type="hidden" name="action"  value="eliminar_area">
                                 <input type="hidden" name="id_area" value="<?= $a['id_area'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm btn-icon">🗑</button>
+                                <button type="submit" class="btn btn-danger btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button>
                             </form>
                         </td>
                         <?php endif; ?>
@@ -153,12 +154,12 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         <!-- EQUIPOS -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">🖥 Inventario de Equipos</div>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Inventario de Equipos</div>
                 <span class="text-muted" style="font-size:13px"><?= count($equipos) ?> equipos</span>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($equipos)): ?>
-                    <div class="empty-state"><span class="empty-icon">🖥</span><p>No hay equipos registrados.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">computer</span><p>No hay equipos registrados.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -187,16 +188,16 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                             <div style="display:flex;gap:6px;flex-wrap:wrap">
                                 <!-- Ver mantenimientos: todos los usuarios -->
                                 <a href="/pages/mantenimientos.php?equipo=<?= urlencode($eq['numero_inventario']) ?>"
-                                   class="btn btn-ghost btn-sm btn-icon" title="Mantenimientos">🔧</a>
+                                   class="btn btn-ghost btn-sm btn-icon" title="Mantenimientos"><span class="material-symbols-outlined mi-sm">build</span></a>
                                 <!-- Editar / Eliminar: solo Admin -->
                                 <?php if (esAdmin()): ?>
                                 <button class="btn btn-warning btn-sm btn-icon" title="Editar"
-                                    onclick="abrirEditar(<?= htmlspecialchars(json_encode($eq), ENT_QUOTES) ?>)">✏</button>
+                                    onclick="abrirEditar(<?= htmlspecialchars(json_encode($eq), ENT_QUOTES) ?>)"><span class="material-symbols-outlined mi-sm">edit</span></button>
                                 <form method="POST" style="display:inline"
                                       onsubmit="return confirm('¿Eliminar el equipo <?= e($eq['numero_inventario']) ?>?')">
                                     <input type="hidden" name="action" value="eliminar_equipo">
                                     <input type="hidden" name="numero_inventario" value="<?= e($eq['numero_inventario']) ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar">🗑</button>
+                                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar"><span class="material-symbols-outlined mi-sm">delete</span></button>
                                 </form>
                                 <?php endif; ?>
                             </div>
@@ -217,8 +218,8 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 <div class="modal-overlay" id="modalNuevaArea">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title">🏫 Registrar Nueva Área</div>
-            <button class="modal-close" onclick="closeModal('modalNuevaArea')">✕</button>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Registrar Nueva Área</div>
+            <button class="modal-close" onclick="closeModal('modalNuevaArea')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
             <form method="POST" action="/pages/equipos.php">
@@ -235,8 +236,8 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 <div class="modal-overlay" id="modalNuevoEquipo">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title">🖥 Registrar Nuevo Equipo</div>
-            <button class="modal-close" onclick="closeModal('modalNuevoEquipo')">✕</button>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">computer</span> Registrar Nuevo Equipo</div>
+            <button class="modal-close" onclick="closeModal('modalNuevoEquipo')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
             <form method="POST" action="/pages/equipos.php">
@@ -270,8 +271,8 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 <div class="modal-overlay" id="modalEditarEquipo">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title">✏ Editar Equipo: <span id="editInvLabel"></span></div>
-            <button class="modal-close" onclick="closeModal('modalEditarEquipo')">✕</button>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">edit</span> Editar Equipo: <span id="editInvLabel"></span></div>
+            <button class="modal-close" onclick="closeModal('modalEditarEquipo')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
             <form method="POST" action="/pages/equipos.php">

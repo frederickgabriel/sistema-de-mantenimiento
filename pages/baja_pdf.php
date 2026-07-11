@@ -51,6 +51,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
 <head>
     <meta charset="UTF-8">
     <title>Dictamen de Baja — <?= $folio ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap');
 
@@ -70,8 +71,9 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
 
         /* ---- Barra de acciones (no imprimible) ---- */
         .no-print {
-            background: #1a1a2e;
-            color: #e6edf3;
+            background: #f5f6fa;
+            color: #1a1a2e;
+            border-bottom: 1px solid #e2e5eb;
             padding: 12px 40px;
             display: flex;
             gap: 12px;
@@ -79,7 +81,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
         }
 
         .no-print button {
-            background: #004085;
+            background: #5b21b6;
             color: #fff;
             border: none;
             padding: 10px 24px;
@@ -91,11 +93,11 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
         }
 
         .no-print button:hover {
-            background: #0056b3;
+            background: #4c1d95;
         }
 
         .no-print a {
-            color: #79c0ff;
+            color: #5b21b6;
             font-size: 14px;
             text-decoration: none;
         }
@@ -397,9 +399,9 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
 
     <!-- Barra de acciones (no se imprime) -->
     <div class="no-print">
-        <button onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
-        <a href="/pages/bajas.php">← Volver a Bajas</a>
-        <span style="color:#8b949e;font-size:13px">Usa Ctrl+P → Guardar como PDF · Folio: <?= $folio ?></span>
+        <button onclick="window.print()"><span class="material-symbols-outlined mi-sm">print</span> Imprimir / Guardar como PDF</button>
+        <a href="/pages/bajas.php"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">arrow_back</span> Volver a Bajas</a>
+        <span style="color:#6e7781;font-size:13px">Usa Ctrl+P <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">arrow_forward</span> Guardar como PDF · Folio: <?= $folio ?></span>
     </div>
 
     <div class="documento">
@@ -407,7 +409,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
         <!-- Header institucional -->
         <div class="doc-header">
             <div>
-                <div class="inst-nombre">🖥 <?= SITE_NAME ?></div>
+                <div class="inst-nombre"><span class="material-symbols-outlined mi-md" style="vertical-align:-4px">computer</span> <?= SITE_NAME ?></div>
                 <div class="inst-sub">Sistema Institucional de Gestión de Equipos de Cómputo</div>
                 <?php if ($b['nombre_area']): ?>
                     <div class="inst-sub" style="margin-top:2px">Área: <?= e($b['nombre_area']) ?><?= $b['ubicacion'] ? " — {$b['ubicacion']}" : '' ?></div>
@@ -428,7 +430,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
 
         <!-- Alerta motivo de baja -->
         <div class="alerta-baja">
-            <div class="alerta-baja-icon">📛</div>
+            <div class="alerta-baja-icon material-symbols-outlined">delete_forever</div>
             <div>
                 <div class="alerta-baja-titulo">BAJA POR: <?= strtoupper(e($b['motivo_baja'])) ?></div>
                 <div class="alerta-baja-motivo">Recomendación final: <strong><?= e($b['recomendacion']) ?></strong></div>
@@ -532,7 +534,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
                             <div class="dato-label">Conclusión económica</div>
                             <div class="dato-valor">
                                 <?php if ($b['costo_reparacion_estimado'] >= $b['valor_actual_estimado']): ?>
-                                    ⚠ El costo de reparación supera o iguala el valor actual del equipo, lo que hace inviable económicamente su reparación.
+                                    <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">warning</span> El costo de reparación supera o iguala el valor actual del equipo, lo que hace inviable económicamente su reparación.
                                 <?php else: ?>
                                     El costo de reparación es inferior al valor del equipo. La baja se justifica por razones técnicas o de obsolescencia.
                                 <?php endif; ?>
@@ -548,7 +550,7 @@ $folio = 'BAJA-' . str_pad($b['id_baja'], 5, '0', STR_PAD_LEFT);
             <div class="seccion-titulo">VI. Estado de Validación Institucional</div>
             <div class="validacion-box <?= strtolower($b['estado_validacion']) ?>">
                 <div class="validacion-estado <?= strtolower($b['estado_validacion']) ?>">
-                    <?= $b['estado_validacion'] === 'Validado' ? '✅ BAJA VALIDADA' : ($b['estado_validacion'] === 'Rechazado' ? '❌ BAJA RECHAZADA' : '⏳ PENDIENTE DE VALIDACIÓN') ?>
+                    <?= $b['estado_validacion'] === 'Validado' ? '<span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> BAJA VALIDADA' : ($b['estado_validacion'] === 'Rechazado' ? '<span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">cancel</span> BAJA RECHAZADA' : '<span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">hourglass_empty</span> PENDIENTE DE VALIDACIÓN') ?>
                 </div>
                 <?php if ($b['estado_validacion'] !== 'Pendiente' && $b['fecha_validacion']): ?>
                     <div style="font-size:12px;color:#555;margin-bottom:8px">

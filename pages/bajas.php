@@ -127,6 +127,7 @@ if ($verPdf) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
     <style>
         .baja-card {
@@ -183,7 +184,7 @@ if ($verPdf) {
 
         <div class="page-header">
             <div>
-                <div class="page-title">🗑 Bajas de Equipos</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">delete</span> Bajas de Equipos</div>
                 <div class="page-subtitle">Diagnóstico y validación institucional de equipos dados de baja</div>
             </div>
             <div class="page-actions">
@@ -192,14 +193,14 @@ if ($verPdf) {
         </div>
 
         <?php if ($msg): ?>
-            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= e($msg) ?></div>
+            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
         <?php if ($verPdf && $bajaDetalle): ?>
         <!-- Banner: PDF listo -->
         <div class="alert alert-success" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-            <span>📄 Baja registrada. El dictamen PDF está listo para descargar.</span>
-            <a href="/pages/baja_pdf.php?pdf=<?= $verPdf ?>" target="_blank" class="btn btn-success btn-sm">📥 Descargar Dictamen PDF</a>
+            <span><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">description</span> Baja registrada. El dictamen PDF está listo para descargar.</span>
+            <a href="/pages/baja_pdf.php?pdf=<?= $verPdf ?>" target="_blank" class="btn btn-success btn-sm"><span class="material-symbols-outlined mi-sm">download</span> Descargar Dictamen PDF</a>
         </div>
         <?php endif; ?>
 
@@ -233,7 +234,7 @@ if ($verPdf) {
         <?php if (empty($bajas)): ?>
             <div class="card">
                 <div class="empty-state" style="padding:60px 20px">
-                    <span class="empty-icon">🖥</span>
+                    <span class="empty-icon material-symbols-outlined">computer</span>
                     <p>No hay equipos dados de baja. Usa el botón superior para registrar una baja.</p>
                 </div>
             </div>
@@ -242,7 +243,7 @@ if ($verPdf) {
             <div class="baja-card">
                 <div class="baja-card-header">
                     <div>
-                        <div class="baja-inv">📛 <?= e($b['numero_inventario']) ?></div>
+                        <div class="baja-inv"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">delete_forever</span> <?= e($b['numero_inventario']) ?></div>
                         <div class="baja-modelo"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin área') ?></div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -254,22 +255,22 @@ if ($verPdf) {
                             default     => 'badge-pendiente-val'
                         };
                         $vIcon = match($b['estado_validacion']) {
-                            'Validado'  => '✅',
-                            'Rechazado' => '❌',
-                            default     => '⏳'
+                            'Validado'  => 'check_circle',
+                            'Rechazado' => 'cancel',
+                            default     => 'hourglass_empty'
                         };
                         ?>
-                        <span class="badge-estado <?= $vClass ?>"><?= $vIcon ?> <?= e($b['estado_validacion']) ?></span>
-                        <a href="/pages/baja_pdf.php?pdf=<?= $b['id_baja'] ?>" target="_blank" class="btn btn-ghost btn-sm">📄 PDF</a>
+                        <span class="badge-estado <?= $vClass ?>"><span class="material-symbols-outlined mi-sm"><?= $vIcon ?></span> <?= e($b['estado_validacion']) ?></span>
+                        <a href="/pages/baja_pdf.php?pdf=<?= $b['id_baja'] ?>" target="_blank" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">description</span> PDF</a>
                         <?php if ($b['estado_validacion'] === 'Pendiente'): ?>
-                        <button class="btn btn-success btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Validado')">✅ Validar</button>
-                        <button class="btn btn-danger btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Rechazado')">❌ Rechazar</button>
+                        <button class="btn btn-success btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Validado')"><span class="material-symbols-outlined mi-sm">check_circle</span> Validar</button>
+                        <button class="btn btn-danger btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Rechazado')"><span class="material-symbols-outlined mi-sm">cancel</span> Rechazar</button>
                         <?php endif; ?>
                         <form method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar esta baja? El equipo volverá a estado Inactivo.')">
                             <input type="hidden" name="action" value="eliminar_baja">
                             <input type="hidden" name="id_baja" value="<?= $b['id_baja'] ?>">
                             <input type="hidden" name="numero_inventario" value="<?= e($b['numero_inventario']) ?>">
-                            <button type="submit" class="btn btn-ghost btn-sm btn-icon">🗑</button>
+                            <button type="submit" class="btn btn-ghost btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button>
                         </form>
                     </div>
                 </div>
@@ -288,13 +289,13 @@ if ($verPdf) {
                 </div>
 
                 <div class="baja-diag">
-                    <strong style="color:var(--text-primary);display:block;margin-bottom:4px">🔍 Diagnóstico:</strong>
+                    <strong style="color:var(--text-primary);display:block;margin-bottom:4px"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">search</span> Diagnóstico:</strong>
                     <?= nl2br(e($b['diagnostico_tecnico'])) ?>
                 </div>
 
                 <?php if ($b['estado_validacion'] !== 'Pendiente' && $b['observaciones_validacion']): ?>
                 <div class="baja-diag" style="border-color:<?= $b['estado_validacion'] === 'Validado' ? 'var(--success)' : 'var(--danger)' ?>;margin-top:8px">
-                    <strong style="color:var(--text-primary);display:block;margin-bottom:4px">📝 Observaciones de validación:</strong>
+                    <strong style="color:var(--text-primary);display:block;margin-bottom:4px"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">description</span> Observaciones de validación:</strong>
                     <?= nl2br(e($b['observaciones_validacion'])) ?>
                 </div>
                 <?php endif; ?>
@@ -309,11 +310,11 @@ if ($verPdf) {
 <div class="modal-overlay" id="modalNuevaBaja">
     <div class="modal-box" style="max-width:620px">
         <div class="modal-header">
-            <div class="modal-title">📛 Dar de Baja un Equipo</div>
-            <button class="modal-close" onclick="closeModal('modalNuevaBaja')">✕</button>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">delete_forever</span> Dar de Baja un Equipo</div>
+            <button class="modal-close" onclick="closeModal('modalNuevaBaja')"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>
         </div>
         <div class="modal-body">
-            <div class="alert alert-warning">⚠ Esta acción cambiará el estado del equipo a <strong>Baja</strong> y generará un dictamen PDF oficial.</div>
+            <div class="alert alert-warning"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">warning</span> Esta acción cambiará el estado del equipo a <strong>Baja</strong> y generará un dictamen PDF oficial.</div>
             <form method="POST" action="/pages/bajas.php">
                 <input type="hidden" name="action" value="registrar_baja">
 
@@ -341,21 +342,21 @@ if ($verPdf) {
                         <label>Motivo de Baja *</label>
                         <select name="motivo_baja" required>
                             <option value="">Selecciona motivo...</option>
-                            <option value="Daño Irreparable">💥 Daño Irreparable</option>
-                            <option value="Obsolescencia">🕰 Obsolescencia Tecnológica</option>
-                            <option value="Robo/Extravío">🚨 Robo / Extravío</option>
-                            <option value="Siniestro">⚡ Siniestro (incendio, inundación, etc.)</option>
-                            <option value="Vida Útil Cumplida">📅 Vida Útil Cumplida</option>
-                            <option value="Otro">📝 Otro</option>
+                            <option value="Daño Irreparable">Daño Irreparable</option>
+                            <option value="Obsolescencia">Obsolescencia Tecnológica</option>
+                            <option value="Robo/Extravío">Robo / Extravío</option>
+                            <option value="Siniestro">Siniestro (incendio, inundación, etc.)</option>
+                            <option value="Vida Útil Cumplida">Vida Útil Cumplida</option>
+                            <option value="Otro">Otro</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Recomendación Final</label>
                         <select name="recomendacion">
-                            <option value="Destrucción">🗑 Destrucción</option>
-                            <option value="Donación">🤝 Donación</option>
-                            <option value="Subasta">💰 Subasta</option>
-                            <option value="Reciclaje">♻ Reciclaje</option>
+                            <option value="Destrucción">Destrucción</option>
+                            <option value="Donación">Donación</option>
+                            <option value="Subasta">Subasta</option>
+                            <option value="Reciclaje">Reciclaje</option>
                         </select>
                     </div>
                 </div>
@@ -400,7 +401,7 @@ if ($verPdf) {
                 </div>
 
                 <button type="submit" class="btn btn-danger btn-full" style="margin-top:8px">
-                    📛 Registrar Baja y Generar Dictamen
+                    <span class="material-symbols-outlined mi-sm">delete_forever</span> Registrar Baja y Generar Dictamen
                 </button>
             </form>
         </div>
@@ -411,8 +412,8 @@ if ($verPdf) {
 <div class="modal-overlay" id="modalValidar">
     <div class="modal-box" style="max-width:440px">
         <div class="modal-header">
-            <div class="modal-title" id="validarTitulo">✅ Validar Baja</div>
-            <button class="modal-close" onclick="closeModal('modalValidar')">✕</button>
+            <div class="modal-title" id="validarTitulo"><span class="material-symbols-outlined mi-md">check_circle</span> Validar Baja</div>
+            <button class="modal-close" onclick="closeModal('modalValidar')"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>
         </div>
         <div class="modal-body">
             <form method="POST" action="/pages/bajas.php">
@@ -439,8 +440,8 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
 function abrirValidar(id, estado) {
     document.getElementById('validarId').value    = id;
     document.getElementById('validarEstado').value = estado;
-    document.getElementById('validarTitulo').textContent = estado === 'Validado' ? '✅ Validar Baja' : '❌ Rechazar Baja';
-    document.getElementById('validarBtn').textContent    = estado === 'Validado' ? '✅ Confirmar Validación' : '❌ Confirmar Rechazo';
+    document.getElementById('validarTitulo').innerHTML = estado === 'Validado' ? '<span class="material-symbols-outlined mi-md">check_circle</span> Validar Baja' : '<span class="material-symbols-outlined mi-md">cancel</span> Rechazar Baja';
+    document.getElementById('validarBtn').innerHTML    = estado === 'Validado' ? '<span class="material-symbols-outlined mi-sm">check_circle</span> Confirmar Validación' : '<span class="material-symbols-outlined mi-sm">cancel</span> Confirmar Rechazo';
     document.getElementById('validarBtn').className = estado === 'Validado'
         ? 'btn btn-success btn-full'
         : 'btn btn-danger btn-full';

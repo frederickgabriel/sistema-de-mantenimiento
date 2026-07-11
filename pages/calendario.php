@@ -85,21 +85,21 @@ $evEntregas = $evEntregas->fetchAll();
 $eventos = [];
 foreach ($evMttos as $ev) {
     $d = (int)date('j', strtotime($ev['fecha']));
-    $eventos[$d][] = ['tipo' => 'proximo', 'texto' => "🔔 Próx: {$ev['numero_inventario']} — {$ev['modelo']}", 'color' => 'ev-warning'];
+    $eventos[$d][] = ['tipo' => 'proximo', 'icon' => 'notifications', 'texto' => "Próx: {$ev['numero_inventario']} — {$ev['modelo']}", 'color' => 'ev-warning'];
 }
 foreach ($evRealizados as $ev) {
     $d = (int)date('j', strtotime($ev['fecha']));
-    $icon = $ev['tipo_mantenimiento'] === 'Preventivo' ? '🛡' : '🔨';
-    $eventos[$d][] = ['tipo' => 'realizado', 'texto' => "{$icon} {$ev['numero_inventario']} — {$ev['tipo_mantenimiento']}", 'color' => 'ev-success'];
+    $icon = $ev['tipo_mantenimiento'] === 'Preventivo' ? 'shield' : 'handyman';
+    $eventos[$d][] = ['tipo' => 'realizado', 'icon' => $icon, 'texto' => "{$ev['numero_inventario']} — {$ev['tipo_mantenimiento']}", 'color' => 'ev-success'];
 }
 foreach ($evTareas as $ev) {
     $d = (int)date('j', strtotime($ev['fecha']));
-    $icon = $ev['estado'] === 'Realizado' ? '✅' : ($ev['prioridad'] === 'Alta' ? '🔴' : '📋');
-    $eventos[$d][] = ['tipo' => 'tarea', 'texto' => "{$icon} Tarea: {$ev['nombre_tarea']}", 'color' => 'ev-info'];
+    $icon = $ev['estado'] === 'Realizado' ? 'check_circle' : ($ev['prioridad'] === 'Alta' ? 'circle' : 'checklist');
+    $eventos[$d][] = ['tipo' => 'tarea', 'icon' => $icon, 'texto' => "Tarea: {$ev['nombre_tarea']}", 'color' => 'ev-info'];
 }
 foreach ($evEntregas as $ev) {
     $d = (int)date('j', strtotime($ev['fecha']));
-    $eventos[$d][] = ['tipo' => 'entrega', 'texto' => "📦 Entrega: {$ev['numero_inventario']}", 'color' => 'ev-purple'];
+    $eventos[$d][] = ['tipo' => 'entrega', 'icon' => 'inventory_2', 'texto' => "Entrega: {$ev['numero_inventario']}", 'color' => 'ev-purple'];
 }
 
 // Lista de eventos del mes ordenados por fecha (para panel lateral)
@@ -119,6 +119,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendario — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
     <style>
         /* ---- Calendario ---- */
@@ -176,7 +177,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
 
         .cal-cell:nth-child(7n) { border-right: none; }
         .cal-cell.empty { background: var(--bg-main); opacity: .4; }
-        .cal-cell.hoy { background: rgba(88,166,255,.06); outline: 2px solid var(--accent) inset; }
+        .cal-cell.hoy { background: rgba(91,33,182,.05); outline: 2px solid var(--accent) inset; }
         .cal-cell:hover:not(.empty) { background: var(--bg-hover); }
 
         .cal-day-num {
@@ -216,11 +217,11 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
             cursor: default;
         }
 
-        .ev-warning { background: rgba(210,153,34,.2);  color: var(--warning); }
-        .ev-success { background: rgba(63,185,80,.2);   color: var(--success); }
-        .ev-info    { background: rgba(88,166,255,.2);  color: var(--info); }
-        .ev-purple  { background: rgba(163,113,247,.2); color: var(--purple); }
-        .ev-danger  { background: rgba(248,81,73,.2);   color: var(--danger); }
+        .ev-warning { background: rgba(154,103,0,.15);  color: var(--warning); }
+        .ev-success { background: rgba(26,127,55,.15);   color: var(--success); }
+        .ev-info    { background: rgba(9,105,218,.15);  color: var(--info); }
+        .ev-purple  { background: rgba(139,92,246,.18); color: var(--purple); }
+        .ev-danger  { background: rgba(207,34,46,.15);   color: var(--danger); }
 
         .ev-more {
             font-size: 10px;
@@ -287,7 +288,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
 
         <div class="page-header">
             <div>
-                <div class="page-title">📅 Calendario</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">calendar_month</span> Calendario</div>
                 <div class="page-subtitle">Mantenimientos, tareas y fechas importantes</div>
             </div>
         </div>
@@ -306,9 +307,9 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
             <div>
                 <!-- Navegación mes -->
                 <div class="cal-nav">
-                    <a href="?mes=<?= $mesAnterior ?>&anio=<?= $anioAnterior ?>" class="btn btn-ghost btn-sm">← Anterior</a>
+                    <a href="?mes=<?= $mesAnterior ?>&anio=<?= $anioAnterior ?>" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">arrow_back</span> Anterior</a>
                     <span class="cal-title"><?= $nombresMes[$mes] ?> <?= $anio ?></span>
-                    <a href="?mes=<?= $mesSiguiente ?>&anio=<?= $anioSiguiente ?>" class="btn btn-ghost btn-sm">Siguiente →</a>
+                    <a href="?mes=<?= $mesSiguiente ?>&anio=<?= $anioSiguiente ?>" class="btn btn-ghost btn-sm">Siguiente <span class="material-symbols-outlined mi-sm">arrow_forward</span></a>
                 </div>
 
                 <!-- Grid del calendario -->
@@ -341,7 +342,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
                             </div>
                             <?php foreach(array_slice($evsDia, 0, $maxShow) as $ev): ?>
                                 <span class="cal-ev <?= $ev['color'] ?>" title="<?= e($ev['texto']) ?>">
-                                    <?= e($ev['texto']) ?>
+                                    <span class="material-symbols-outlined mi-xs" style="vertical-align:-2px"><?= e($ev['icon']) ?></span> <?= e($ev['texto']) ?>
                                 </span>
                             <?php endforeach; ?>
                             <?php if ($resto > 0): ?>
@@ -364,13 +365,13 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
             <div class="ev-panel">
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title" style="font-size:14px">📌 Eventos de <?= $nombresMes[$mes] ?></div>
+                        <div class="card-title" style="font-size:14px"><span class="material-symbols-outlined mi-md">push_pin</span> Eventos de <?= $nombresMes[$mes] ?></div>
                         <span class="text-muted" style="font-size:12px"><?= count($todosEventos) ?> eventos</span>
                     </div>
                     <div class="card-body" style="padding:0 16px;max-height:520px;overflow-y:auto">
                         <?php if (empty($todosEventos)): ?>
                             <div class="empty-state" style="padding:28px 0">
-                                <span class="empty-icon" style="font-size:32px">📭</span>
+                                <span class="empty-icon material-symbols-outlined" style="font-size:32px">inbox</span>
                                 <p>Sin eventos este mes.</p>
                             </div>
                         <?php else: ?>
@@ -390,7 +391,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
                 <!-- Resumen del mes -->
                 <div class="card" style="margin-top:16px">
                     <div class="card-header">
-                        <div class="card-title" style="font-size:14px">📊 Resumen del mes</div>
+                        <div class="card-title" style="font-size:14px"><span class="material-symbols-outlined mi-md">bar_chart</span> Resumen del mes</div>
                     </div>
                     <div class="card-body">
                         <?php

@@ -216,6 +216,7 @@ $iniciales  = substr($iniciales, 0, 2);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración — <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css">
     <style>
         /* ---- Layout configuración ---- */
@@ -465,16 +466,16 @@ $iniciales  = substr($iniciales, 0, 2);
 
         <div class="page-header">
             <div>
-                <div class="page-title">⚙ Configuración</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">settings</span> Configuración</div>
                 <div class="page-subtitle">Gestiona tu perfil y preferencias del sistema</div>
             </div>
         </div>
 
         <?php if ($msg): ?>
-            <div class="alert alert-success"><?= e($msg) ?></div>
+            <div class="alert alert-success"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
         <?php if ($err): ?>
-            <div class="alert alert-error"><?= e($err) ?></div>
+            <div class="alert alert-error"><?= renderMsg($err) ?></div>
         <?php endif; ?>
 
         <div class="config-layout">
@@ -499,23 +500,23 @@ $iniciales  = substr($iniciales, 0, 2);
                 <ul class="config-nav-menu">
                     <li>
                         <a href="?tab=perfil" class="<?= $tab === 'perfil' ? 'active' : '' ?>">
-                            <span class="nav-icon">👤</span> Mi Perfil
+                            <span class="nav-icon material-symbols-outlined">person</span> Mi Perfil
                         </a>
                     </li>
                     <li>
                         <a href="?tab=seguridad" class="<?= $tab === 'seguridad' ? 'active' : '' ?>">
-                            <span class="nav-icon">🔒</span> Seguridad
+                            <span class="nav-icon material-symbols-outlined">lock</span> Seguridad
                         </a>
                     </li>
                     <li>
                         <a href="?tab=cuenta" class="<?= $tab === 'cuenta' ? 'active' : '' ?>">
-                            <span class="nav-icon">ℹ</span> Info de Cuenta
+                            <span class="nav-icon material-symbols-outlined">info</span> Info de Cuenta
                         </a>
                     </li>
                     <?php if (!esAdmin()): ?>
                     <li>
                         <a href="?tab=rol" class="<?= $tab === 'rol' ? 'active' : '' ?>">
-                            <span class="nav-icon">👑</span> Solicitar Admin
+                            <span class="nav-icon material-symbols-outlined">admin_panel_settings</span> Solicitar Admin
                         </a>
                     </li>
                     <?php endif; ?>
@@ -535,7 +536,7 @@ $iniciales  = substr($iniciales, 0, 2);
                 <!-- Foto de perfil -->
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">🖼 Foto de Perfil</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">image</span> Foto de Perfil</div>
                         <div class="config-section-sub">Se mostrará en el menú lateral y en los documentos generados</div>
                     </div>
                     <div class="config-section-body">
@@ -564,7 +565,7 @@ $iniciales  = substr($iniciales, 0, 2);
                                                class="input-file-hidden" accept="image/*">
                                         <button type="button" class="btn btn-primary btn-sm"
                                                 onclick="document.getElementById('inputFoto').click()">
-                                            📷 Subir Foto
+                                            <span class="material-symbols-outlined mi-sm">photo_camera</span> Subir Foto
                                         </button>
                                     </form>
                                     <!-- Eliminar foto -->
@@ -572,7 +573,7 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <form method="POST" action="/pages/configuracion.php"
                                           onsubmit="return confirm('¿Eliminar tu foto de perfil?')">
                                         <input type="hidden" name="action" value="eliminar_foto">
-                                        <button type="submit" class="btn btn-ghost btn-sm">🗑 Eliminar foto</button>
+                                        <button type="submit" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">delete</span> Eliminar foto</button>
                                     </form>
                                     <?php endif; ?>
                                 </div>
@@ -584,7 +585,7 @@ $iniciales  = substr($iniciales, 0, 2);
                 <!-- Datos personales -->
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">✏ Datos Personales</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">edit</span> Datos Personales</div>
                         <div class="config-section-sub">Actualiza tu nombre, correo y demás información</div>
                     </div>
                     <div class="config-section-body">
@@ -631,7 +632,7 @@ $iniciales  = substr($iniciales, 0, 2);
                             </div>
 
                             <div style="display:flex;justify-content:flex-end">
-                                <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+                                <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">save</span> Guardar Cambios</button>
                             </div>
                         </form>
                     </div>
@@ -644,7 +645,7 @@ $iniciales  = substr($iniciales, 0, 2);
 
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">🔑 Cambiar Contraseña</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">key</span> Cambiar Contraseña</div>
                         <div class="config-section-sub">Usa una contraseña segura de al menos 6 caracteres</div>
                     </div>
                     <div class="config-section-body">
@@ -656,8 +657,8 @@ $iniciales  = substr($iniciales, 0, 2);
                                 <div class="input-group">
                                     <input type="password" name="password_actual" id="passActual"
                                            placeholder="••••••••" required>
-                                    <button type="button" class="toggle-pass"
-                                            onclick="togglePass('passActual',this)">👁</button>
+                                    <button type="button" class="toggle-pass material-symbols-outlined"
+                                            onclick="togglePass('passActual',this)">visibility</button>
                                 </div>
                             </div>
 
@@ -669,8 +670,8 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <input type="password" name="password_nueva" id="passNueva"
                                            placeholder="••••••••" required
                                            oninput="evaluarPass(this.value)">
-                                    <button type="button" class="toggle-pass"
-                                            onclick="togglePass('passNueva',this)">👁</button>
+                                    <button type="button" class="toggle-pass material-symbols-outlined"
+                                            onclick="togglePass('passNueva',this)">visibility</button>
                                 </div>
                                 <div class="pass-strength">
                                     <div class="pass-strength-fill" id="passStrengthBar"></div>
@@ -684,8 +685,8 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <input type="password" name="password_confirmar" id="passConfirm"
                                            placeholder="••••••••" required
                                            oninput="verificarMatch()">
-                                    <button type="button" class="toggle-pass"
-                                            onclick="togglePass('passConfirm',this)">👁</button>
+                                    <button type="button" class="toggle-pass material-symbols-outlined"
+                                            onclick="togglePass('passConfirm',this)">visibility</button>
                                 </div>
                                 <div class="pass-hint" id="matchHint"></div>
                             </div>
@@ -701,7 +702,7 @@ $iniciales  = substr($iniciales, 0, 2);
                             </div>
 
                             <div style="display:flex;justify-content:flex-end">
-                                <button type="submit" class="btn btn-primary">🔒 Actualizar Contraseña</button>
+                                <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">lock</span> Actualizar Contraseña</button>
                             </div>
                         </form>
                     </div>
@@ -710,7 +711,7 @@ $iniciales  = substr($iniciales, 0, 2);
                 <!-- Sesión activa -->
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">🌐 Sesión Activa</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">public</span> Sesión Activa</div>
                         <div class="config-section-sub">Información de tu sesión actual</div>
                     </div>
                     <div class="config-section-body">
@@ -731,7 +732,7 @@ $iniciales  = substr($iniciales, 0, 2);
                             <span class="badge-estado badge-activo">● Sesión Activa</span>
                         </div>
                         <div style="margin-top:16px">
-                            <a href="/actions/logout.php" class="btn btn-danger btn-sm">⏻ Cerrar Sesión</a>
+                            <a href="/actions/logout.php" class="btn btn-danger btn-sm"><span class="material-symbols-outlined mi-sm">logout</span> Cerrar Sesión</a>
                         </div>
                     </div>
                 </div>
@@ -743,7 +744,7 @@ $iniciales  = substr($iniciales, 0, 2);
 
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">ℹ Información de la Cuenta</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">info</span> Información de la Cuenta</div>
                         <div class="config-section-sub">Datos de registro y actividad en el sistema</div>
                     </div>
                     <div class="config-section-body">
@@ -773,7 +774,7 @@ $iniciales  = substr($iniciales, 0, 2);
                         </div>
                         <div class="info-row">
                             <span class="info-label">Foto de perfil</span>
-                            <span class="info-value"><?= ($usuario['foto_perfil'] ?? null) ? '✅ Configurada' : '— Sin foto' ?></span>
+                            <span class="info-value"><?= ($usuario['foto_perfil'] ?? null) ? '<span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Configurada' : '— Sin foto' ?></span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Fecha de registro</span>
@@ -798,7 +799,7 @@ $iniciales  = substr($iniciales, 0, 2);
                 ?>
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">📊 Mi Actividad en el Sistema</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">bar_chart</span> Mi Actividad en el Sistema</div>
                         <div class="config-section-sub">Resumen de tu participación</div>
                     </div>
                     <div class="config-section-body">
@@ -826,7 +827,7 @@ $iniciales  = substr($iniciales, 0, 2);
                 <?php if ($usuario['bio'] ?? null): ?>
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">📝 Descripción / Bio</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">description</span> Descripción / Bio</div>
                     </div>
                     <div class="config-section-body">
                         <p style="color:var(--text-secondary);font-size:14px;line-height:1.7">
@@ -854,29 +855,29 @@ $iniciales  = substr($iniciales, 0, 2);
 
                 <div class="config-section">
                     <div class="config-section-header">
-                        <div class="config-section-title">👑 Solicitar Rol de Administrador</div>
+                        <div class="config-section-title"><span class="material-symbols-outlined mi-md">admin_panel_settings</span> Solicitar Rol de Administrador</div>
                         <div class="config-section-sub">El administrador evaluará tu solicitud desde su panel de Gestión de Roles</div>
                     </div>
                     <div class="config-section-body">
 
                         <?php if ($err): ?>
-                            <div class="alert alert-error"><?= e($err) ?></div>
+                            <div class="alert alert-error"><?= renderMsg($err) ?></div>
                         <?php endif; ?>
 
                         <?php if ($msg): ?>
-                            <div class="alert alert-success"><?= e($msg) ?></div>
+                            <div class="alert alert-success"><?= renderMsg($msg) ?></div>
                         <?php endif; ?>
 
                         <!-- Info de permisos admin -->
                         <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:22px">
                             <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px">¿Qué puede hacer un Administrador?</p>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
-                                <div style="color:var(--success)">✅ Crear y editar Áreas</div>
-                                <div style="color:var(--success)">✅ Crear y eliminar Equipos</div>
-                                <div style="color:var(--success)">✅ Eliminar Mantenimientos</div>
-                                <div style="color:var(--success)">✅ Gestionar Bajas de Equipos</div>
-                                <div style="color:var(--success)">✅ Validar dictámenes de Baja</div>
-                                <div style="color:var(--success)">✅ Gestionar roles de usuarios</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Crear y editar Áreas</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Crear y eliminar Equipos</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Eliminar Mantenimientos</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Gestionar Bajas de Equipos</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Validar dictámenes de Baja</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Gestionar roles de usuarios</div>
                             </div>
                         </div>
 
@@ -885,21 +886,21 @@ $iniciales  = substr($iniciales, 0, 2);
                         if ($solActual && $solActual['estado'] === 'Pendiente' && !$msg):
                         ?>
                             <div class="alert alert-warning">
-                                ⏳ <strong>Solicitud pendiente.</strong> Enviada el <?= fechaES(date('Y-m-d', strtotime($solActual['fecha_solicitud']))) ?>.<br>
+                                <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">hourglass_empty</span> <strong>Solicitud pendiente.</strong> Enviada el <?= fechaES(date('Y-m-d', strtotime($solActual['fecha_solicitud']))) ?>.<br>
                                 El administrador la verá en su panel y te responderá pronto.
                             </div>
 
                         <?php elseif ($solActual && $solActual['estado'] === 'Aprobada' && !$msg): ?>
                             <div class="alert alert-success">
-                                ✅ <strong>¡Tu solicitud fue aprobada!</strong><br>
+                                <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> <strong>¡Tu solicitud fue aprobada!</strong><br>
                                 Cierra sesión y vuelve a entrar para que los cambios tengan efecto.
                             </div>
-                            <a href="/actions/logout.php" class="btn btn-primary" style="margin-top:8px">↩ Cerrar sesión ahora</a>
+                            <a href="/actions/logout.php" class="btn btn-primary" style="margin-top:8px"><span class="material-symbols-outlined mi-sm">undo</span> Cerrar sesión ahora</a>
 
                         <?php elseif ($solActual && $solActual['estado'] === 'Rechazada'): ?>
                             <?php if (!$msg): ?>
                             <div class="alert alert-error">
-                                ❌ <strong>Solicitud rechazada.</strong>
+                                <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">cancel</span> <strong>Solicitud rechazada.</strong>
                                 <?= $solActual['respuesta'] ? '<br>Motivo del administrador: <em>' . e($solActual['respuesta']) . '</em>' : '' ?>
                             </div>
                             <?php endif; ?>
@@ -910,7 +911,7 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <label>Nueva justificación *</label>
                                     <textarea name="justificacion" rows="4" required placeholder="Explica por qué necesitas permisos de Administrador..."></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-primary">📨 Enviar Nueva Solicitud</button>
+                                <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">mail</span> Enviar Nueva Solicitud</button>
                             </form>
 
                         <?php else: ?>
@@ -922,10 +923,10 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <label>Justificación *</label>
                                     <textarea name="justificacion" rows="4" required placeholder="Explica por qué necesitas acceso de Administrador y cuál es tu responsabilidad..."></textarea>
                                 </div>
-                                <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary)">
-                                    📧 Tu solicitud quedará registrada y el administrador la verá en su panel de <strong>Gestión de Roles</strong>.
+                                <div style="background:rgba(91,33,182,.05);border:1px solid rgba(91,33,182,.18);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary)">
+                                    <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">email</span> Tu solicitud quedará registrada y el administrador la verá en su panel de <strong>Gestión de Roles</strong>.
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-full">📨 Enviar Solicitud</button>
+                                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">mail</span> Enviar Solicitud</button>
                             </form>
                             <?php endif; ?>
 
@@ -964,7 +965,7 @@ document.getElementById('inputFoto')?.addEventListener('change', function() {
 function togglePass(id, btn) {
     const input = document.getElementById(id);
     input.type  = input.type === 'password' ? 'text' : 'password';
-    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+    btn.textContent = input.type === 'password' ? 'visibility' : 'visibility_off';
 }
 
 // ---- Evaluador de fortaleza de contraseña ----
@@ -980,19 +981,20 @@ function evaluarPass(val) {
     if (/[0-9]/.test(val)) score++;
     if (/[^A-Za-z0-9]/.test(val)) score++;
 
+    const micon = (name) => '<span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">' + name + '</span> ';
     const niveles = [
         { pct:  '0%', color: 'var(--border)', label: 'Escribe una contraseña' },
-        { pct: '20%', color: 'var(--danger)',  label: '⚠ Muy débil' },
-        { pct: '40%', color: 'var(--danger)',  label: '⚠ Débil' },
-        { pct: '60%', color: 'var(--warning)', label: '👍 Aceptable' },
-        { pct: '80%', color: 'var(--accent)',  label: '✅ Fuerte' },
-        { pct:'100%', color: 'var(--success)', label: '🔒 Muy fuerte' },
+        { pct: '20%', color: 'var(--danger)',  label: micon('warning') + 'Muy débil' },
+        { pct: '40%', color: 'var(--danger)',  label: micon('warning') + 'Débil' },
+        { pct: '60%', color: 'var(--warning)', label: micon('thumb_up') + 'Aceptable' },
+        { pct: '80%', color: 'var(--accent)',  label: micon('check_circle') + 'Fuerte' },
+        { pct:'100%', color: 'var(--success)', label: micon('lock') + 'Muy fuerte' },
     ];
 
     const n = niveles[val.length === 0 ? 0 : score] || niveles[score];
     bar.style.width      = n.pct;
     bar.style.background = n.color;
-    hint.textContent     = n.label;
+    hint.innerHTML        = n.label;
     hint.style.color     = n.color;
 }
 
@@ -1004,10 +1006,10 @@ function verificarMatch() {
     if (!hint || !confirma) return;
 
     if (nueva === confirma) {
-        hint.textContent = '✅ Las contraseñas coinciden';
+        hint.innerHTML = '<span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">check_circle</span> Las contraseñas coinciden';
         hint.style.color = 'var(--success)';
     } else {
-        hint.textContent = '❌ No coinciden';
+        hint.innerHTML = '<span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">cancel</span> No coinciden';
         hint.style.color = 'var(--danger)';
     }
 }

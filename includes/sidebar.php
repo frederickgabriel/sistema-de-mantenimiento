@@ -18,7 +18,8 @@ if (isset($_SESSION['usuario']) && !array_key_exists('foto_perfil', $_SESSION['u
 
 function navLink(string $page, string $icon, string $label, string $current): string {
     $active = ($current === $page) ? 'active' : '';
-    return "<li><a href=\"/pages/{$page}\" class=\"nav-item {$active}\"><span class=\"nav-icon\">{$icon}</span><span class=\"nav-label\">" . htmlspecialchars($label) . "</span></a></li>";
+    $labelEsc = htmlspecialchars($label);
+    return "<li><a href=\"/pages/{$page}\" class=\"nav-item {$active}\" title=\"{$labelEsc}\"><span class=\"material-symbols-outlined nav-icon\">{$icon}</span><span class=\"nav-label\">{$labelEsc}</span></a></li>";
 }
 
 $foto    = $_SESSION['usuario']['foto_perfil'] ?? null;
@@ -41,7 +42,7 @@ if ($esAdm) {
     <button class="topbar-ham" id="hamBtn" onclick="sbToggle()" aria-label="Abrir menú">
         <span></span><span></span><span></span>
     </button>
-    <span class="topbar-title">🖥 ManteTech</span>
+    <span class="topbar-title"><span class="material-symbols-outlined mi-sm">computer</span> ManteTech</span>
     <a href="/pages/configuracion.php" class="topbar-av">
         <?php if ($foto): ?>
             <img src="/uploads/perfiles/<?= htmlspecialchars($foto) ?>" alt="Foto">
@@ -57,11 +58,11 @@ if ($esAdm) {
 <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-brand">
-        <div class="brand-icon">🖥</div>
-        <div>
-            <span class="brand-name">TechCare</span>
-            <span class="brand-sub">Gestión de Equipos</span>
-        </div>
+        <button class="topbar-ham sidebar-ham" id="sidebarHamBtn" onclick="sbCollapseToggle()" aria-label="Contraer u expandir menú" title="Contraer / expandir menú">
+            <span></span><span></span><span></span>
+        </button>
+        <img src="/img/hytta.png" alt="Zilara TechCare" class="brand-logo-img">
+        <span class="brand-sub">Gestión de Equipos</span>
     </div>
 
     <div class="sidebar-user">
@@ -75,28 +76,28 @@ if ($esAdm) {
             <span class="user-name"><?= e($nombre) ?></span>
             <span class="user-role"><?= e($cargo) ?></span>
             <?php if ($esAdm): ?>
-                <span style="font-size:10px;color:var(--purple);font-weight:700;display:block">👑 ADMINISTRADOR</span>
+                <span style="font-size:10px;color:var(--purple);font-weight:700;display:block"><span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">admin_panel_settings</span> ADMINISTRADOR</span>
             <?php endif; ?>
         </div>
     </div>
 
     <nav class="sidebar-nav">
         <ul>
-            <?= navLink('dashboard.php',     '◈',  'Dashboard',        $currentPage) ?>
-            <?= navLink('equipos.php',        '🖥', 'Equipos y Áreas',  $currentPage) ?>
-            <?= navLink('mantenimientos.php', '🔧', 'Mantenimientos',   $currentPage) ?>
-            <?= navLink('tareas.php',         '📋', 'Tareas',           $currentPage) ?>
-            <?= navLink('calendario.php',     '📅', 'Calendario',       $currentPage) ?>
-            <?= navLink('Estadisticas.php',   '📈', 'Estadísticas',     $currentPage) ?>
-            <?= navLink('reportes.php',       '📊', 'Reportes PDF',     $currentPage) ?>
+            <?= navLink('dashboard.php',     'dashboard',        'Dashboard',        $currentPage) ?>
+            <?= navLink('equipos.php',        'computer',         'Equipos y Áreas',  $currentPage) ?>
+            <?= navLink('mantenimientos.php', 'build',            'Mantenimientos',   $currentPage) ?>
+            <?= navLink('tareas.php',         'checklist',        'Tareas',           $currentPage) ?>
+            <?= navLink('calendario.php',     'calendar_month',   'Calendario',       $currentPage) ?>
+            <?= navLink('Estadisticas.php',   'monitoring',       'Estadísticas',     $currentPage) ?>
+            <?= navLink('reportes.php',       'bar_chart',        'Reportes PDF',     $currentPage) ?>
             <?php if ($esAdm): ?>
-                <?= navLink('bajas.php',      '📛', 'Bajas de Equipos', $currentPage) ?>
+                <?= navLink('bajas.php',      'delete_forever',   'Bajas de Equipos', $currentPage) ?>
                 <li>
-                    <a href="/pages/admin_roles.php" class="nav-item <?= $currentPage==='admin_roles.php' ? 'active' : '' ?>">
-                        <span class="nav-icon">👑</span>
+                    <a href="/pages/admin_roles.php" class="nav-item <?= $currentPage==='admin_roles.php' ? 'active' : '' ?>" title="Gestión de Roles">
+                        <span class="material-symbols-outlined nav-icon">admin_panel_settings</span>
                         <span class="nav-label">Gestión de Roles</span>
                         <?php if ($pendRol > 0): ?>
-                            <span style="margin-left:auto;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:2px 7px">
+                            <span class="nav-badge" style="margin-left:auto;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:2px 7px">
                                 <?= $pendRol ?>
                             </span>
                         <?php endif; ?>
@@ -107,12 +108,12 @@ if ($esAdm) {
     </nav>
 
     <div class="sidebar-footer">
-        <a href="/pages/configuracion.php" class="nav-item <?= $currentPage==='configuracion.php' ? 'active' : '' ?>" style="margin-bottom:6px">
-            <span class="nav-icon">⚙</span>
+        <a href="/pages/configuracion.php" class="nav-item <?= $currentPage==='configuracion.php' ? 'active' : '' ?>" style="margin-bottom:6px" title="Configuración">
+            <span class="material-symbols-outlined nav-icon">settings</span>
             <span class="nav-label">Configuración</span>
         </a>
-        <a href="/actions/logout.php" class="logout-btn">
-            <span>⏻</span> Cerrar Sesión
+        <a href="/actions/logout.php" class="logout-btn" title="Cerrar Sesión">
+            <span class="material-symbols-outlined mi-sm">logout</span> <span class="logout-label">Cerrar Sesión</span>
         </a>
     </div>
 
@@ -138,4 +139,19 @@ document.querySelectorAll('#sidebar .nav-item, #sidebar .logout-btn').forEach(el
     el.addEventListener('click', () => { if (window.innerWidth <= 768) sbClose(); });
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') sbClose(); });
+
+// Colapsar sidebar a solo-íconos (escritorio)
+function sbCollapseToggle() {
+    const layout = document.querySelector('.app-layout');
+    if (!layout) return;
+    const collapsed = layout.classList.toggle('sidebar-collapsed');
+    document.getElementById('sidebarHamBtn')?.classList.toggle('open', collapsed);
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+}
+(function () {
+    if (localStorage.getItem('sidebarCollapsed') === '1' && window.innerWidth > 768) {
+        document.querySelector('.app-layout')?.classList.add('sidebar-collapsed');
+        document.getElementById('sidebarHamBtn')?.classList.add('open');
+    }
+})();
 </script>
