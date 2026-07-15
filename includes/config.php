@@ -4,6 +4,8 @@
 // Archivo: includes/config.php
 // =============================================
 
+require_once __DIR__ . '/../vendor/autoload.php';
+
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '2004');  // <-- Cambia esto
@@ -89,7 +91,18 @@ function badgeTarea(string $estado): string {
 // CONFIGURACIÓN DE ROLES
 // =============================================
 define('ADMIN_EMAIL', 'frederickaguilar317@gmail.com');
- 
+
+// =============================================
+// CONFIGURACIÓN SMTP (envío de correo con PHPMailer)
+// =============================================
+// Genera una "contraseña de aplicación" en https://myaccount.google.com/apppasswords
+// (requiere verificación en 2 pasos activada en la cuenta de Gmail) y pégala en SMTP_PASS.
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'frederickaguilar317@gmail.com');
+define('SMTP_PASS', 'bmtv qfxo jetw rdbg'); // <-- Pega aquí tu contraseña de aplicación de Gmail (16 caracteres, sin espacios)
+define('SMTP_FROM_NAME', 'Sistema ManteTech');
+
 // Verificar si el usuario actual es admin
 function esAdmin(): bool {
     return ($_SESSION['usuario']['rol'] ?? 'usuario') === 'admin';
@@ -112,49 +125,58 @@ function badgeRol(string $rol): string {
     return '<span class="badge-estado badge-inactivo"><span class="material-symbols-outlined mi-xs">person</span> Usuario</span>';
 }
  
-// Enviar email de solicitud de rol (usa mail() nativo de PHP)
-function enviarEmailSolicitudRol(string $nombreUsuario, string $cargoUsuario, string $correoUsuario, string $justificacion, int $idSolicitud): bool {
-    $para    = ADMIN_EMAIL;
-    $asunto  = '=?UTF-8?B?' . base64_encode('[ManteTech] Solicitud de rol Admin — ' . $nombreUsuario) . '?=';
-    $urlPanel = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-              . '://' . $_SERVER['HTTP_HOST'] . '/pages/admin_roles.php';
- 
-    $cuerpo = "Hola Administrador,
- 
-"
-            . "El siguiente usuario ha solicitado el rol de Administrador en el sistema ManteTech:
- 
-"
-            . "  Nombre:       {$nombreUsuario}
-"
-            . "  Cargo:        {$cargoUsuario}
-"
-            . "  Correo:       {$correoUsuario}
-"
-            . "  ID Solicitud: #{$idSolicitud}
- 
-"
-            . "Justificación:
-"
-            . "  {$justificacion}
- 
-"
-            . "Para aprobar o rechazar la solicitud, ingresa al panel de administración:
-"
-            . "  {$urlPanel}
- 
-"
-            . "— Sistema ManteTech";
- 
-    $headers  = "From: noreply@mantetech.local
-";
-    $headers .= "Reply-To: {$correoUsuario}
-";
-    $headers .= "X-Mailer: PHP/" . phpversion() . "
-";
-    $headers .= "Content-Type: text/plain; charset=UTF-8
-";
- 
-    return mail($para, $asunto, $cuerpo, $headers);
+// Enviar email de solicitud de rol con botones de Aprobar/Rechazar (PHPMailer + SMTP)
+function enviarEmailSolicitudRol(string $nombreUsuario, string $cargoUsuario, string $correoUsuario, string $justificacion, int $idSolicitud, string $token): bool {
+    $urlBase = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+             . '://' . $_SERVER['HTTP_HOST'] . '/pages/procesar_solicitud_email.php';
+    $urlAprobar  = $urlBase . '?token=' . urlencode($token) . '&accion=aprobar';
+    $urlRechazar = $urlBase . '?token=' . urlencode($token) . '&accion=rechazar';
+
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USER;
+        $mail->Password   = SMTP_PASS;
+        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = SMTP_PORT;
+        $mail->CharSet    = 'UTF-8';
+
+        $mail->setFrom(SMTP_USER, SMTP_FROM_NAME);
+        $mail->addAddress(ADMIN_EMAIL);
+        $mail->addReplyTo($correoUsuario, $nombreUsuario);
+
+        $mail->isHTML(true);
+        $mail->Subject = '[ManteTech] Solicitud de rol Admin — ' . $nombreUsuario;
+        $mail->Body    = '
+            <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#1f2328">
+                <h2 style="margin-bottom:4px">Solicitud de rol Administrador</h2>
+                <p>El siguiente usuario ha solicitado el rol de <strong>Administrador</strong> en el sistema ManteTech:</p>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                    <tr><td style="padding:4px 0;color:#57606a">Nombre</td><td style="padding:4px 0"><strong>' . e($nombreUsuario) . '</strong></td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">Cargo</td><td style="padding:4px 0">' . e($cargoUsuario) . '</td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">Correo</td><td style="padding:4px 0">' . e($correoUsuario) . '</td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">ID Solicitud</td><td style="padding:4px 0">#' . $idSolicitud . '</td></tr>
+                </table>
+                <p style="color:#57606a">Justificación:</p>
+                <p style="background:#f6f8fa;border-left:3px solid #d0d7de;padding:10px 14px;border-radius:0 6px 6px 0">' . nl2br(e($justificacion)) . '</p>
+                <div style="margin:26px 0;text-align:center">
+                    <a href="' . $urlAprobar . '" style="display:inline-block;background:#1f883d;color:#fff;text-decoration:none;padding:10px 22px;border-radius:6px;font-weight:600;margin-right:10px">Aprobar solicitud</a>
+                    <a href="' . $urlRechazar . '" style="display:inline-block;background:#cf222e;color:#fff;text-decoration:none;padding:10px 22px;border-radius:6px;font-weight:600">Rechazar solicitud</a>
+                </div>
+                <p style="font-size:12px;color:#8b949e">Estos enlaces son de un solo uso y solo funcionan una vez. También puedes gestionar esta solicitud desde el panel de Gestión de Roles.</p>
+            </div>';
+        $mail->AltBody = "El usuario {$nombreUsuario} ({$cargoUsuario}, {$correoUsuario}) solicitó el rol de Administrador.\n\n"
+                        . "Justificación: {$justificacion}\n\n"
+                        . "Aprobar: {$urlAprobar}\n"
+                        . "Rechazar: {$urlRechazar}";
+
+        $mail->send();
+        return true;
+    } catch (PHPMailer\PHPMailer\Exception $e) {
+        error_log('Error enviando email de solicitud de rol: ' . $mail->ErrorInfo);
+        return false;
+    }
 }
  

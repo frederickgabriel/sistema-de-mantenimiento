@@ -124,6 +124,8 @@ CREATE TABLE IF NOT EXISTS SolicitudesRol (
     justificacion  TEXT NOT NULL,
     estado         ENUM('Pendiente','Aprobada','Rechazada') DEFAULT 'Pendiente',
     respuesta      TEXT NULL,
+    token          VARCHAR(64) NULL,
+    token_usado    TINYINT(1) NOT NULL DEFAULT 0,
     fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_respuesta TIMESTAMP NULL,
     FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE CASCADE
@@ -145,3 +147,8 @@ INSERT INTO Equipos (numero_inventario, modelo, marca, estado, id_area) VALUES
 ('INV-001', 'OptiPlex 7090',    'Dell',   'Activo',        1),
 ('INV-002', 'EliteDesk 800 G6', 'HP',     'Activo',        1),
 ('INV-003', 'ThinkCentre M90q', 'Lenovo', 'En Reparacion', 2);
+
+
+ALTER TABLE SolicitudesRol
+    ADD COLUMN token       VARCHAR(64) NULL AFTER respuesta,
+    ADD COLUMN token_usado TINYINT(1) NOT NULL DEFAULT 0 AFTER token;

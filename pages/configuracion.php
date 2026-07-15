@@ -179,9 +179,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($chk->fetch()) {
                     $err = 'Ya tienes una solicitud pendiente de revisión.';
                 } else {
-                    $db->prepare("INSERT INTO SolicitudesRol (id_usuario, justificacion) VALUES (?,?)")
-                       ->execute([$usuario['id_usuario'], $justificacion]);
-                    $msg = '✅ Solicitud enviada. El administrador la revisará en su panel de Gestión de Roles.';
+                    $token = bin2hex(random_bytes(32));
+                    $db->prepare("INSERT INTO SolicitudesRol (id_usuario, justificacion, token) VALUES (?,?,?)")
+                       ->execute([$usuario['id_usuario'], $justificacion, $token]);
+                    $idSolicitud = (int)$db->lastInsertId();
+
+                    $enviado = enviarEmailSolicitudRol($usuario['nombre'], $usuario['cargo'], $usuario['correo'], $justificacion, $idSolicitud, $token);
+
+                    $msg = $enviado
+                        ? '✅ Solicitud enviada. Se notificó por correo al administrador.'
+                        : '✅ Solicitud registrada, pero no se pudo enviar el correo al administrador. Puede revisarla igualmente en su panel de Gestión de Roles.';
                 }
             } catch (PDOException $e) {
                 $err = '❌ Error al guardar: ' . $e->getMessage() . ' — Asegúrate de haber ejecutado database_roles.sql';
