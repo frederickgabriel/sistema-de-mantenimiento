@@ -28,7 +28,7 @@ $stmt=$db->prepare("SELECT m.*,e.modelo,e.marca,a.nombre_area,u.nombre as tecnic
 $stmt->execute($params); $mantenimientos=$stmt->fetchAll();
 $equipos=$db->query("SELECT numero_inventario,modelo,marca FROM Equipos ORDER BY numero_inventario")->fetchAll();
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=6"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">build</span> Mantenimientos</div><div class="page-subtitle">Historial y registro de mantenimientos</div></div><div class="page-actions"><?php if($filtroEquipo): ?><a href="/pages/mantenimientos.php" class="btn btn-ghost"><span class="material-symbols-outlined mi-sm">close</span> Quitar filtro</a><?php endif; ?><button class="btn btn-primary" onclick="openModal('modalNuevoMtto')">+ Registrar Mantenimiento</button></div></div>

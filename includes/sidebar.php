@@ -42,7 +42,7 @@ if ($esAdm) {
     <button class="topbar-ham" id="hamBtn" onclick="sbToggle()" aria-label="Abrir menú">
         <span></span><span></span><span></span>
     </button>
-    <span class="topbar-title"><span class="material-symbols-outlined mi-sm">computer</span> ManteTech</span>
+    <span class="topbar-title"><span class="material-symbols-outlined mi-sm">computer</span> ZILARA TECHCARE</span>
     <a href="/pages/configuracion.php" class="topbar-av">
         <?php if ($foto): ?>
             <img src="/uploads/perfiles/<?= htmlspecialchars($foto) ?>" alt="Foto">

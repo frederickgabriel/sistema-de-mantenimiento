@@ -32,7 +32,7 @@ $equipos=$db->query("SELECT numero_inventario,modelo FROM Equipos ORDER BY numer
 $usuarios=$db->query("SELECT id_usuario,nombre,cargo FROM Usuarios ORDER BY nombre")->fetchAll();
 $estados=['Pendiente','En Proceso','Realizado','No Realizado'];
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=6"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">checklist</span> Tareas</div><div class="page-subtitle">Actividades pendientes y seguimiento</div></div><div class="page-actions"><button class="btn btn-primary" onclick="openModal('modalNuevaTarea')">+ Nueva Tarea</button></div></div>

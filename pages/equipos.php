@@ -80,7 +80,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css">
+    <link rel="stylesheet" href="/css/estilos.css?v=6">
 </head>
 <body>
 <div class="app-layout">
