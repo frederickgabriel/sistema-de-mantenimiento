@@ -67,7 +67,7 @@ function fechaES(?string $fecha): string {
     if (!$fecha) return '—';
     $meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     $ts = strtotime($fecha);
-    return date('d', $ts) . ' ' . $meses[(int)date('m', $ts) - 1] . ' ' . date('Y', $ts);
+    return date('d', $ts) . ' ' . $meses[(int)date('m', $ts)] . ' ' . date('Y', $ts);
 }
  
 function badgeEstado(string $estado): string {

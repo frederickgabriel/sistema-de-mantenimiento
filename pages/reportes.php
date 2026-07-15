@@ -29,16 +29,46 @@ $mttosMes  = $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE DATE_FORMAT(f
 // ¿Se solicitó PDF?
 $generarPDF = isset($_GET['pdf']);
 
-// Mantenimientos recientes (para el reporte)
-$mantenimientos = $db->query("
-    SELECT m.*, e.modelo, e.marca, a.nombre_area, u.nombre as tecnico
-    FROM Mantenimientos m
-    JOIN Equipos e ON e.numero_inventario = m.numero_inventario
-    LEFT JOIN Areas a ON e.id_area = a.id_area
-    LEFT JOIN Usuarios u ON u.id_usuario = m.id_tecnico
-    ORDER BY m.fecha_realizacion DESC
-    LIMIT 50
-")->fetchAll();
+// Periodo seleccionado para el reporte (fecha exacta día/mes/año, viene del selector de calendario)
+$desde = $_GET['desde'] ?? '';
+$hasta = $_GET['hasta'] ?? '';
+$desde = preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde) ? $desde : '';
+$hasta = preg_match('/^\d{4}-\d{2}-\d{2}$/', $hasta) ? $hasta : '';
+if ($desde !== '' && $hasta !== '' && $desde > $hasta) {
+    [$desde, $hasta] = [$hasta, $desde];
+}
+$hayPeriodo  = $desde !== '' && $hasta !== '';
+$fechaInicio = $hayPeriodo ? $desde : null;
+$fechaFin    = $hayPeriodo ? $hasta : null;
+
+$periodoTexto = $hayPeriodo
+    ? fechaES($fechaInicio) . ' — ' . fechaES($fechaFin)
+    : 'Historial reciente (últimos 50 registros)';
+
+// Mantenimientos del reporte: filtrados por periodo si se seleccionó uno, si no, los últimos 50
+if ($hayPeriodo) {
+    $stmtMttos = $db->prepare("
+        SELECT m.*, e.modelo, e.marca, a.nombre_area, u.nombre as tecnico
+        FROM Mantenimientos m
+        JOIN Equipos e ON e.numero_inventario = m.numero_inventario
+        LEFT JOIN Areas a ON e.id_area = a.id_area
+        LEFT JOIN Usuarios u ON u.id_usuario = m.id_tecnico
+        WHERE m.fecha_realizacion BETWEEN ? AND ?
+        ORDER BY m.fecha_realizacion DESC
+    ");
+    $stmtMttos->execute([$fechaInicio, $fechaFin]);
+    $mantenimientos = $stmtMttos->fetchAll();
+} else {
+    $mantenimientos = $db->query("
+        SELECT m.*, e.modelo, e.marca, a.nombre_area, u.nombre as tecnico
+        FROM Mantenimientos m
+        JOIN Equipos e ON e.numero_inventario = m.numero_inventario
+        LEFT JOIN Areas a ON e.id_area = a.id_area
+        LEFT JOIN Usuarios u ON u.id_usuario = m.id_tecnico
+        ORDER BY m.fecha_realizacion DESC
+        LIMIT 50
+    ")->fetchAll();
+}
 
 // Equipos con próximo mantenimiento próximo o vencido
 $urgentes = $db->query("
@@ -118,6 +148,7 @@ if ($generarPDF):
     <div>
         <div class="report-title"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">computer</span> Reporte de Mantenimiento de Equipos</div>
         <div class="report-sub">Sistema Institucional de Gestión de Cómputo</div>
+        <div class="report-sub">Periodo: <?= e($periodoTexto) ?></div>
     </div>
     <div class="report-date">
         Generado: <?= date('d/m/Y H:i') ?><br>
@@ -170,7 +201,7 @@ if ($generarPDF):
 <?php endif; ?>
 
 <div class="section" style="padding-top:0">
-    <div class="section-title">Historial de Mantenimientos Recientes (últimos 50)</div>
+    <div class="section-title">Historial de Mantenimientos — <?= e($periodoTexto) ?></div>
     <table>
         <thead>
             <tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha Inicio</th><th>Fecha Entrega</th><th>Próx. Cita</th><th>Técnico</th></tr>
@@ -231,7 +262,7 @@ endif;
                 <div class="page-subtitle">Vista previa y descarga de reportes en PDF</div>
             </div>
             <div class="page-actions">
-                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">download</span> Generar Reporte PDF</a>
+                <button type="button" class="btn btn-primary" onclick="openModal('modalPeriodoPDF')"><span class="material-symbols-outlined mi-sm">download</span> Generar Reporte PDF</button>
             </div>
         </div>
 
@@ -295,7 +326,7 @@ endif;
         <div class="card">
             <div class="card-header">
                 <div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Vista Previa — Últimos Mantenimientos</div>
-                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-primary btn-sm"><span class="material-symbols-outlined mi-sm">download</span> Descargar PDF completo</a>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openModal('modalPeriodoPDF')"><span class="material-symbols-outlined mi-sm">download</span> Descargar PDF completo</button>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($mantenimientos)): ?>
@@ -334,5 +365,41 @@ endif;
 
     </main>
 </div>
+
+<!-- Modal: Seleccionar periodo del reporte -->
+<div class="modal-overlay" id="modalPeriodoPDF">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-header">
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">date_range</span> Periodo del Reporte</div>
+            <button class="modal-close" onclick="closeModal('modalPeriodoPDF')"><span class="material-symbols-outlined mi-sm">close</span></button>
+        </div>
+        <div class="modal-body">
+            <form method="GET" action="/pages/reportes.php" target="_blank">
+                <input type="hidden" name="pdf" value="1">
+                <p class="page-subtitle" style="margin:-4px 0 16px">Elige las fechas exactas (día, mes y año) que quieres incluir en el PDF.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Desde</label>
+                        <input type="date" name="desde" value="<?= e(date('Y-m-d', strtotime('-5 months'))) ?>" max="<?= e(date('Y-m-d')) ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hasta</label>
+                        <input type="date" name="hasta" value="<?= e(date('Y-m-d')) ?>" max="<?= e(date('Y-m-d')) ?>" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">download</span> Descargar PDF del Periodo</button>
+                <a href="/pages/reportes.php?pdf=1" target="_blank" class="btn btn-ghost btn-full" style="margin-top:10px">Descargar todo el historial reciente</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+</script>
 </body>
 </html>

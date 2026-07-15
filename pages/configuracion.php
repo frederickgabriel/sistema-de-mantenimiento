@@ -443,7 +443,7 @@ $iniciales  = substr($iniciales, 0, 2);
         .pass-strength-fill {
             height: 100%;
             border-radius: 2px;
-            transition: all .3s;
+            transition: width 0.3s ease, background-color 0.3s ease;
             width: 0;
         }
         .pass-hint {
