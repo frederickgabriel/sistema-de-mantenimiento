@@ -767,4 +767,76 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
     }
 }
 
+/* ============================================
+   MÓDULO EMPLEADOS + AVATARES + EVIDENCIAS + LIGHTBOX
+   ============================================ */
+
+.avatar-chip {
+    border-radius: 50%; object-fit: cover; flex-shrink: 0; cursor: pointer;
+    border: 2px solid var(--border); transition: transform 0.2s var(--ease-out), border-color 0.2s;
+}
+.avatar-chip:hover { transform: scale(1.08); border-color: var(--accent-dark); }
+.avatar-chip-initial {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border-radius: 50%; background: linear-gradient(135deg, var(--accent-dark), var(--purple));
+    color: #fff; font-weight: 700; font-family: var(--font-mono); cursor: default;
+    border: 2px solid transparent;
+}
+
+.employee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.employee-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 20px; display: flex; flex-direction: column; gap: 16px;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.employee-card:hover { border-color: var(--accent-dark); transform: translateY(-2px); box-shadow: var(--shadow); }
+.employee-card-head { display: flex; align-items: center; gap: 14px; }
+.employee-detail-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.employee-card-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.employee-card-name { font-weight: 700; font-size: 15px; color: var(--text-primary); }
+.employee-card-cargo { font-size: 13px; color: var(--text-secondary); }
+.employee-card-correo { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.employee-card-stats { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); }
+.employee-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; text-align: center; }
+.employee-stat strong { font-size: 16px; color: var(--text-primary); font-family: var(--font-mono); }
+.employee-stat span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.evidencia-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 20px 22px; }
+.evidencia-item { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg-card2); }
+.evidencia-item img { width: 100%; height: 120px; object-fit: cover; cursor: pointer; display: block; transition: transform 0.25s var(--ease-out); }
+.evidencia-item img:hover { transform: scale(1.05); }
+.evidencia-caption { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; font-size: 11px; }
+.evidencia-caption span:first-child { font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+
+.lightbox-overlay {
+    position: fixed; inset: 0; background: rgba(10,10,20,0.85); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden; transition: opacity 0.25s var(--ease-out), visibility 0.25s;
+}
+.lightbox-overlay.open { opacity: 1; visibility: visible; }
+.lightbox-img {
+    max-width: 90vw; max-height: 90vh; border-radius: var(--radius-md); box-shadow: var(--shadow);
+    transform: scale(0.92); transition: transform 0.25s var(--ease-out); cursor: default;
+}
+.lightbox-overlay.open .lightbox-img { transform: scale(1); }
+.lightbox-close {
+    position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.12); border: none;
+    color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: background 0.2s;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+.evidencia-item-manage { position: relative; }
+.evidencia-delete-btn {
+    position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(20,20,30,0.65); color: #fff; border: none; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.15s var(--ease-out);
+}
+.evidencia-delete-btn:hover { background: var(--danger); transform: scale(1.08); }
+
+@media (max-width: 480px) {
+    .employee-grid { grid-template-columns: 1fr; }
+    .evidencia-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+}
+
 /* El grid de stats tiene repeat(4,1fr) inline — lo sobreescribimos */

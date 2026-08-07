@@ -152,3 +152,37 @@ INSERT INTO Equipos (numero_inventario, modelo, marca, estado, id_area) VALUES
 ALTER TABLE SolicitudesRol
     ADD COLUMN token       VARCHAR(64) NULL AFTER respuesta,
     ADD COLUMN token_usado TINYINT(1) NOT NULL DEFAULT 0 AFTER token;
+
+-- =============================================
+-- MÓDULO EMPLEADOS (solo Admin) + evidencia fotográfica de equipos
+-- =============================================
+
+-- Registrar el momento exacto en que se completó una tarea
+ALTER TABLE Tareas
+    ADD COLUMN fecha_completado TIMESTAMP NULL DEFAULT NULL AFTER estado;
+
+-- Evidencia fotográfica del equipo (antes de abrirlo), subida por el empleado
+-- al registrar un Mantenimiento o al completar una Tarea
+CREATE TABLE IF NOT EXISTS EvidenciasEquipo (
+    id_evidencia      INT AUTO_INCREMENT PRIMARY KEY,
+    origen            ENUM('Mantenimiento','Tarea') NOT NULL,
+    id_origen         INT NOT NULL,
+    numero_inventario VARCHAR(50)  NULL,
+    id_usuario        INT NOT NULL,
+    ruta_imagen       VARCHAR(255) NOT NULL,
+    fecha_subida      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE CASCADE,
+    INDEX idx_origen (origen, id_origen),
+    INDEX idx_usuario (id_usuario)
+);
+
+-- Estado manual de un Mantenimiento (En Proceso / Completado). Una vez Completado,
+-- el registro ya no se puede editar (aunque sí se puede reagendar, eliminar o gestionar sus fotos).
+ALTER TABLE Mantenimientos
+    ADD COLUMN estado ENUM('En Proceso','Completado') NOT NULL DEFAULT 'En Proceso' AFTER tipo_mantenimiento;
+
+-- Dar de baja (desactivar) una cuenta sin borrarla: un usuario inactivo no puede iniciar sesión,
+-- pero conserva su historial de tareas/mantenimientos/evidencias para auditoría. Reversible desde
+-- Gestión de Roles. También se agregó ahí un botón de eliminación permanente (irreversible).
+ALTER TABLE Usuarios
+    ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER rol;

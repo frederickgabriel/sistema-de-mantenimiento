@@ -224,7 +224,7 @@ $iniciales  = substr($iniciales, 0, 2);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
     <style>
         /* ---- Layout configuración ---- */
         .config-layout {
@@ -897,12 +897,28 @@ $iniciales  = substr($iniciales, 0, 2);
                                 El administrador la verá en su panel y te responderá pronto.
                             </div>
 
-                        <?php elseif ($solActual && $solActual['estado'] === 'Aprobada' && !$msg): ?>
+                        <?php elseif ($solActual && $solActual['estado'] === 'Aprobada' && $usuario['rol'] === 'admin' && !$msg): ?>
                             <div class="alert alert-success">
                                 <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> <strong>¡Tu solicitud fue aprobada!</strong><br>
                                 Cierra sesión y vuelve a entrar para que los cambios tengan efecto.
                             </div>
                             <a href="/actions/logout.php" class="btn btn-primary" style="margin-top:8px"><span class="material-symbols-outlined mi-sm">undo</span> Cerrar sesión ahora</a>
+
+                        <?php elseif ($solActual && $solActual['estado'] === 'Aprobada' && $usuario['rol'] !== 'admin'): ?>
+                            <?php if (!$msg): ?>
+                            <div class="alert alert-warning">
+                                <span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">info</span> <strong>Tu solicitud anterior fue aprobada, pero tu rol de Administrador fue removido después.</strong>
+                            </div>
+                            <?php endif; ?>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">Puedes enviar una nueva solicitud si sigues necesitando el acceso:</p>
+                            <form method="POST" action="/pages/configuracion.php">
+                                <input type="hidden" name="action" value="solicitar_rol">
+                                <div class="form-group">
+                                    <label>Nueva justificación *</label>
+                                    <textarea name="justificacion" rows="4" required placeholder="Explica por qué necesitas permisos de Administrador..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><span class="material-symbols-outlined mi-sm">mail</span> Enviar Nueva Solicitud</button>
+                            </form>
 
                         <?php elseif ($solActual && $solActual['estado'] === 'Rechazada'): ?>
                             <?php if (!$msg): ?>

@@ -69,8 +69,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$areas       = $db->query("SELECT *, (SELECT COUNT(*) FROM Equipos WHERE id_area=Areas.id_area) as total_equipos FROM Areas ORDER BY nombre_area")->fetchAll();
-$equipos     = $db->query("SELECT e.*, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area ORDER BY e.fecha_registro DESC")->fetchAll();
+// Filtros del inventario (los equipos dados de Baja no se listan aquí — viven en el módulo de Bajas)
+$filtroArea   = (int)($_GET['area'] ?? 0);
+$filtroEstado = $_GET['estado'] ?? '';
+$orden        = $_GET['orden'] ?? 'recientes';
+$estadosValidos = ['Activo', 'Inactivo', 'En Reparacion'];
+
+$condsEq = ["e.estado != 'Baja'"]; $paramsEq = [];
+if ($filtroArea)   { $condsEq[] = "e.id_area=?"; $paramsEq[] = $filtroArea; }
+if ($filtroEstado && in_array($filtroEstado, $estadosValidos)) { $condsEq[] = "e.estado=?"; $paramsEq[] = $filtroEstado; }
+$whereEq  = 'WHERE ' . implode(' AND ', $condsEq);
+$ordenSql = $orden === 'antiguos' ? 'ASC' : 'DESC';
+
+$areas       = $db->query("SELECT *, (SELECT COUNT(*) FROM Equipos WHERE id_area=Areas.id_area AND estado!='Baja') as total_equipos FROM Areas ORDER BY nombre_area")->fetchAll();
+$stmtEq      = $db->prepare("SELECT e.*, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area {$whereEq} ORDER BY e.fecha_registro {$ordenSql}");
+$stmtEq->execute($paramsEq);
+$equipos     = $stmtEq->fetchAll();
 $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombre_area")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -80,7 +94,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
 </head>
 <body>
 <div class="app-layout">
@@ -157,9 +171,41 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Inventario de Equipos</div>
                 <span class="text-muted" style="font-size:13px"><?= count($equipos) ?> equipos</span>
             </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border-light)">
+                <div class="form-group" style="margin-bottom:0;min-width:180px">
+                    <label>Área</label>
+                    <select onchange="location.href='/pages/equipos.php?area='+this.value+'&estado=<?= urlencode($filtroEstado) ?>&orden=<?= urlencode($orden) ?>'">
+                        <option value="">Todas las áreas</option>
+                        <?php foreach ($areasSelect as $a): ?>
+                        <option value="<?= $a['id_area'] ?>" <?= $filtroArea===(int)$a['id_area']?'selected':'' ?>><?= e($a['nombre_area']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;min-width:180px">
+                    <label>Estado</label>
+                    <select onchange="location.href='/pages/equipos.php?area=<?= $filtroArea ?>&estado='+this.value+'&orden=<?= urlencode($orden) ?>'">
+                        <option value="">Todos los estados</option>
+                        <?php foreach ($estadosValidos as $es): ?>
+                        <option value="<?= $es ?>" <?= $filtroEstado===$es?'selected':'' ?>><?= $es==='En Reparacion'?'En Reparación':$es ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;min-width:180px">
+                    <label>Ordenar por</label>
+                    <select onchange="location.href='/pages/equipos.php?area=<?= $filtroArea ?>&estado=<?= urlencode($filtroEstado) ?>&orden='+this.value">
+                        <option value="recientes" <?= $orden==='recientes'?'selected':'' ?>>Más reciente primero</option>
+                        <option value="antiguos" <?= $orden==='antiguos'?'selected':'' ?>>Menos reciente primero</option>
+                    </select>
+                </div>
+                <?php if ($filtroArea || $filtroEstado || $orden !== 'recientes'): ?>
+                <div style="align-self:flex-end">
+                    <a href="/pages/equipos.php" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">close</span> Quitar filtros</a>
+                </div>
+                <?php endif; ?>
+            </div>
             <div class="table-wrapper">
                 <?php if (empty($equipos)): ?>
-                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">computer</span><p>No hay equipos registrados.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">computer</span><p><?= ($filtroArea || $filtroEstado) ? 'Ningún equipo coincide con esos filtros.' : 'No hay equipos registrados.' ?></p></div>
                 <?php else: ?>
                 <table>
                     <thead>

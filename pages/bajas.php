@@ -128,7 +128,7 @@ if ($verPdf) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
     <style>
         .baja-card {
             background: var(--bg-card);
@@ -188,6 +188,9 @@ if ($verPdf) {
                 <div class="page-subtitle">Diagnóstico y validación institucional de equipos dados de baja</div>
             </div>
             <div class="page-actions">
+                <?php if (!empty($bajas)): ?>
+                <a href="/pages/bajas_reporte_pdf.php" target="_blank" class="btn btn-ghost"><span class="material-symbols-outlined mi-sm">description</span> Reporte General PDF</a>
+                <?php endif; ?>
                 <button class="btn btn-danger" onclick="openModal('modalNuevaBaja')">+ Dar de Baja Equipo</button>
             </div>
         </div>

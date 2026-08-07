@@ -39,6 +39,14 @@ function requireLogin(): void {
         header('Location: /index.php');
         exit;
     }
+    $stmt = getDB()->prepare("SELECT activo FROM Usuarios WHERE id_usuario=?");
+    $stmt->execute([$_SESSION['usuario']['id']]);
+    $row = $stmt->fetch();
+    if (!$row || (int)$row['activo'] === 0) {
+        session_destroy();
+        header('Location: /index.php?err=' . urlencode('Tu cuenta ha sido desactivada. Contacta al administrador.'));
+        exit;
+    }
 }
  
 function redirectIfLoggedIn(): void {
@@ -86,7 +94,72 @@ function badgeTarea(string $estado): string {
     $icoHtml = $ico ? "<span class=\"material-symbols-outlined mi-xs\">{$ico}</span> " : '';
     return "<span class=\"badge-estado {$css}\">{$icoHtml}" . e($estado) . "</span>";
 }
- 
+
+// Ruta pública de una foto de perfil (o null si el usuario no tiene)
+function rutaFoto(?string $foto): ?string {
+    return $foto ? '/uploads/perfiles/' . $foto : null;
+}
+
+// Avatar circular clicable (abre el lightbox) para mostrar la foto de un usuario en listados;
+// si no tiene foto, muestra un círculo con su inicial.
+function avatarChip(?string $foto, string $nombre, int $size = 30): string {
+    $inicial = e(mb_strtoupper(mb_substr($nombre, 0, 1)));
+    $px      = $size . 'px';
+    if ($foto) {
+        $src = e(rutaFoto($foto));
+        return "<img src=\"{$src}\" alt=\"{$inicial}\" class=\"avatar-chip\" style=\"width:{$px};height:{$px}\" onclick=\"abrirLightbox('{$src}')\">";
+    }
+    $fontSize = max(11, (int)round($size * 0.4)) . 'px';
+    return "<span class=\"avatar-chip avatar-chip-initial\" style=\"width:{$px};height:{$px};font-size:{$fontSize}\">{$inicial}</span>";
+}
+
+// Guarda hasta $max fotos (evidencia de equipo "antes de abrirlo") ligadas a un Mantenimiento o una Tarea.
+// Reutiliza las mismas reglas de validación que la foto de perfil (jpg/png/webp/gif, 3MB máx).
+function guardarEvidencias(PDO $db, array $files, string $origen, int $idOrigen, ?string $inventario, int $idUsuario, int $max = 5): array {
+    $errores = [];
+    if (empty($files['name']) || !is_array($files['name'])) return $errores;
+
+    $nombres = array_filter($files['name'], fn($n) => $n !== '');
+    if (empty($nombres)) return $errores;
+    if (count($nombres) > $max) $errores[] = "Solo se permiten {$max} fotos por registro; se subieron las primeras {$max}.";
+
+    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/evidencias/';
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+    $maxSize = 3 * 1024 * 1024;
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    $finfo   = finfo_open(FILEINFO_MIME_TYPE);
+    $subidas = 0;
+
+    foreach ($files['name'] as $i => $nombreOriginal) {
+        if ($subidas >= $max) break;
+        if (($files['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || $nombreOriginal === '') continue;
+
+        $tmp  = $files['tmp_name'][$i];
+        $mime = finfo_file($finfo, $tmp);
+
+        if ($files['size'][$i] > $maxSize) {
+            $errores[] = "«{$nombreOriginal}» supera 3 MB y no se subió.";
+            continue;
+        }
+        if (!isset($allowed[$mime])) {
+            $errores[] = "«{$nombreOriginal}» no es una imagen válida (JPG, PNG, WEBP o GIF).";
+            continue;
+        }
+
+        $nombreArchivo = strtolower($origen) . '_' . $idOrigen . '_' . ($subidas + 1) . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $allowed[$mime];
+        if (move_uploaded_file($tmp, $uploadDir . $nombreArchivo)) {
+            $db->prepare("INSERT INTO EvidenciasEquipo (origen,id_origen,numero_inventario,id_usuario,ruta_imagen) VALUES (?,?,?,?,?)")
+               ->execute([$origen, $idOrigen, $inventario, $idUsuario, $nombreArchivo]);
+            $subidas++;
+        } else {
+            $errores[] = "Error al guardar «{$nombreOriginal}».";
+        }
+    }
+    finfo_close($finfo);
+    return $errores;
+}
+
 // =============================================
 // CONFIGURACIÓN DE ROLES
 // =============================================

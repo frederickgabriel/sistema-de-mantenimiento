@@ -82,7 +82,7 @@ if (!$token || !in_array($accion, ['aprobar', 'rechazar'], true)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($titulo) ?> — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
 </head>
 <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-main)">
     <div class="card" style="max-width:460px;width:90%;padding:36px;text-align:center">

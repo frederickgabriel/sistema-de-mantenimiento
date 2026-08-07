@@ -62,6 +62,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = '✅ Rol de Administrador otorgado.';
     }
 
+    // --- Dar de baja (desactivar) a un usuario: no puede iniciar sesión, pero conserva su historial ---
+    elseif ($action === 'desactivar_usuario') {
+        $idUsuario = (int)($_POST['id_usuario'] ?? 0);
+        if ($idUsuario === (int)$_SESSION['usuario']['id']) {
+            $msg = '❌ No puedes darte de baja a ti mismo.';
+        } else {
+            $db->prepare("UPDATE Usuarios SET activo=0 WHERE id_usuario=?")->execute([$idUsuario]);
+            $msg = '✅ Usuario dado de baja.';
+        }
+    }
+
+    // --- Reactivar a un usuario dado de baja ---
+    elseif ($action === 'reactivar_usuario') {
+        $idUsuario = (int)($_POST['id_usuario'] ?? 0);
+        $db->prepare("UPDATE Usuarios SET activo=1 WHERE id_usuario=?")->execute([$idUsuario]);
+        $msg = '✅ Usuario reactivado.';
+    }
+
+    // --- Eliminar permanentemente la cuenta de un usuario ---
+    elseif ($action === 'eliminar_usuario') {
+        $idUsuario = (int)($_POST['id_usuario'] ?? 0);
+        if ($idUsuario === (int)$_SESSION['usuario']['id']) {
+            $msg = '❌ No puedes eliminar tu propia cuenta.';
+        } else {
+            $u = $db->prepare("SELECT foto_perfil FROM Usuarios WHERE id_usuario=?"); $u->execute([$idUsuario]); $u = $u->fetch();
+            if ($u) {
+                if ($u['foto_perfil']) {
+                    $ruta = $_SERVER['DOCUMENT_ROOT'].'/uploads/perfiles/'.$u['foto_perfil'];
+                    if (file_exists($ruta)) unlink($ruta);
+                }
+                $evs = $db->prepare("SELECT ruta_imagen FROM EvidenciasEquipo WHERE id_usuario=?"); $evs->execute([$idUsuario]);
+                foreach ($evs->fetchAll() as $ev) {
+                    $ruta = $_SERVER['DOCUMENT_ROOT'].'/uploads/evidencias/'.$ev['ruta_imagen'];
+                    if (file_exists($ruta)) unlink($ruta);
+                }
+                $db->prepare("DELETE FROM Usuarios WHERE id_usuario=?")->execute([$idUsuario]);
+                $msg = '🗑 Cuenta eliminada permanentemente.';
+            } else {
+                $msg = '❌ Usuario no encontrado.';
+            }
+        }
+    }
+
+    // --- Eliminar una solicitud ya resuelta (Aprobada/Rechazada) para limpiar el historial ---
+    elseif ($action === 'eliminar_solicitud' && $idSolicitud) {
+        $del = $db->prepare("DELETE FROM SolicitudesRol WHERE id_solicitud=? AND estado != 'Pendiente'");
+        $del->execute([$idSolicitud]);
+        $msg = $del->rowCount() ? '🗑 Solicitud eliminada.' : '❌ No se puede eliminar una solicitud pendiente.';
+    }
+
     } catch (PDOException $e) {
         $msg = '❌ Error de base de datos: ' . $e->getMessage();
         header("Location: /pages/admin_roles.php?msg=" . urlencode($msg));
@@ -88,7 +138,7 @@ try {
 
 // Cargar todos los usuarios
 $usuarios = $db->query("
-    SELECT id_usuario, nombre, cargo, correo, rol, fecha_registro,
+    SELECT id_usuario, nombre, cargo, correo, rol, activo, foto_perfil, fecha_registro,
            (SELECT COUNT(*) FROM Mantenimientos WHERE id_tecnico=Usuarios.id_usuario) as total_mttos,
            (SELECT COUNT(*) FROM Tareas WHERE id_usuario_asignado=Usuarios.id_usuario) as total_tareas
     FROM Usuarios
@@ -104,7 +154,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
     <style>
         .solicitud-card {
             background: var(--bg-card);
@@ -193,7 +243,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
         </div>
 
         <?php if ($msg): ?>
-            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🚫') ? 'alert-warning' : 'alert-error') ?>"><?= renderMsg($msg) ?></div>
+            <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🚫') ? 'alert-warning' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error')) ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
         <!-- Stats -->
@@ -266,7 +316,16 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                         default     => ''
                                     };
                                     ?>
-                                    <span class="badge-estado <?= $bc ?>"><?= $bi ?> <?= e($s['estado']) ?></span>
+                                    <div style="display:flex;align-items:center;gap:6px">
+                                        <span class="badge-estado <?= $bc ?>"><?= $bi ?> <?= e($s['estado']) ?></span>
+                                        <?php if ($s['estado'] !== 'Pendiente'): ?>
+                                        <form method="POST" onsubmit="return confirm('¿Eliminar esta solicitud del historial?')">
+                                            <input type="hidden" name="action" value="eliminar_solicitud">
+                                            <input type="hidden" name="id_solicitud" value="<?= $s['id_solicitud'] ?>">
+                                            <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Eliminar solicitud" style="color:var(--text-muted)"><span class="material-symbols-outlined mi-sm">close</span></button>
+                                        </form>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
 
                                 <div class="sol-just">
@@ -327,11 +386,9 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                         <span class="text-muted" style="font-size:12px"><?= $totalUsuarios ?> usuarios</span>
                     </div>
                     <div>
-                        <?php foreach ($usuarios as $u): ?>
-                        <div class="user-row">
-                            <div class="user-avatar-sm">
-                                <?= strtoupper(substr($u['nombre'], 0, 1)) ?>
-                            </div>
+                        <?php foreach ($usuarios as $u): $inactivo = !(int)$u['activo']; ?>
+                        <div class="user-row" style="<?= $inactivo?'opacity:.55':'' ?>">
+                            <?= avatarChip($u['foto_perfil'], $u['nombre'], 38) ?>
                             <div class="user-info-col">
                                 <div class="user-nombre">
                                     <?= e($u['nombre']) ?>
@@ -343,7 +400,10 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                 </div>
                             </div>
                             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-                                <?= badgeRol($u['rol']) ?>
+                                <div style="display:flex;gap:6px">
+                                    <?= badgeRol($u['rol']) ?>
+                                    <?php if ($inactivo): ?><span class="badge-estado badge-no-realizado"><span class="material-symbols-outlined mi-xs">block</span> Inactivo</span><?php endif; ?>
+                                </div>
                                 <?php if ($u['id_usuario'] != $_SESSION['usuario']['id']): ?>
                                     <?php if ($u['rol'] === 'usuario'): ?>
                                         <form method="POST" onsubmit="return confirm('¿Dar rol Admin a <?= e($u['nombre']) ?>?')">
@@ -358,6 +418,24 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                             <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)"><span class="material-symbols-outlined mi-xs">undo</span> Quitar Admin</button>
                                         </form>
                                     <?php endif; ?>
+                                    <?php if ($inactivo): ?>
+                                        <form method="POST" onsubmit="return confirm('¿Reactivar a <?= e($u['nombre']) ?>? Podrá iniciar sesión de nuevo.')">
+                                            <input type="hidden" name="action" value="reactivar_usuario">
+                                            <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
+                                            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--success)"><span class="material-symbols-outlined mi-xs">check_circle</span> Reactivar</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <form method="POST" onsubmit="return confirm('¿Dar de baja a <?= e($u['nombre']) ?>? No podrá iniciar sesión hasta que lo reactives. Su historial se conserva.')">
+                                            <input type="hidden" name="action" value="desactivar_usuario">
+                                            <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
+                                            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--warning)"><span class="material-symbols-outlined mi-xs">block</span> Dar de baja</button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <form method="POST" onsubmit="return confirm('¿ELIMINAR PERMANENTEMENTE la cuenta de <?= e($u['nombre']) ?>? Esta acción no se puede deshacer.')">
+                                        <input type="hidden" name="action" value="eliminar_usuario">
+                                        <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
+                                        <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)"><span class="material-symbols-outlined mi-xs">delete_forever</span> Eliminar</button>
+                                    </form>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -408,5 +486,6 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
         </div>
     </main>
 </div>
+<?php include '../includes/lightbox.php'; ?>
 </body>
 </html>

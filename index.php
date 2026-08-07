@@ -4,6 +4,7 @@ redirectIfLoggedIn();
 
 $error = $success = '';
 $tab   = 'login';
+if (isset($_GET['err'])) $error = $_GET['err'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -44,12 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = getDB()->prepare("SELECT * FROM Usuarios WHERE correo=? LIMIT 1");
             $stmt->execute([$correo]);
             $user = $stmt->fetch();
-            if ($user && password_verify($password, $user['password'])) {
+            if (!$user || !password_verify($password, $user['password'])) {
+                $error = 'Correo o contraseña incorrectos.';
+            } elseif ((int)($user['activo'] ?? 1) === 0) {
+                $error = 'Tu cuenta ha sido desactivada. Contacta al administrador.';
+            } else {
                 $_SESSION['usuario'] = ['id' => $user['id_usuario'], 'nombre' => $user['nombre'], 'cargo' => $user['cargo'], 'correo' => $user['correo']];
                 header('Location: /pages/dashboard.php');
                 exit;
-            } else {
-                $error = 'Correo o contraseña incorrectos.';
             }
         }
     }
@@ -65,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <link rel="stylesheet" href="/css/estilos.css?v=8">
 </head>
 <body>
 
