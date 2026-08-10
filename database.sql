@@ -186,3 +186,8 @@ ALTER TABLE Mantenimientos
 -- Gestión de Roles. También se agregó ahí un botón de eliminación permanente (irreversible).
 ALTER TABLE Usuarios
     ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1 AFTER rol;
+
+-- Permite iniciar sesión con Google: guarda el "sub" (ID único de cuenta de Google)
+-- para vincularlo con la cuenta existente (por correo) o detectar cuentas creadas vía Google.
+ALTER TABLE Usuarios
+    ADD COLUMN google_id VARCHAR(255) NULL UNIQUE AFTER password;

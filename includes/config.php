@@ -166,6 +166,56 @@ function guardarEvidencias(PDO $db, array $files, string $origen, int $idOrigen,
 define('ADMIN_EMAIL', 'frederickaguilar317@gmail.com');
 
 // =============================================
+// CONFIGURACIÓN DE GOOGLE SIGN-IN
+// =============================================
+// Crea un "OAuth client ID" de tipo "Aplicación web" en:
+// https://console.cloud.google.com/apis/credentials
+// y pega aquí el Client ID (termina en .apps.googleusercontent.com).
+define('GOOGLE_CLIENT_ID', '622263573317-j9qv78q5jdeoebn9qcvr1g7m322evpp9.apps.googleusercontent.com');
+
+// Verifica un ID token emitido por Google Identity Services y devuelve su payload
+// (correo, nombre, sub, etc.) solo si es válido para este Client ID; null si no.
+function verificarTokenGoogle(string $idToken): ?array {
+    $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+    $ch  = curl_init($url);
+    $opciones = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ];
+    // Algunos entornos de Windows (XAMPP/Laragon) no traen configurado curl.cainfo en php.ini,
+    // lo que hace fallar la verificación SSL (curl error 60). Usamos el bundle de Mozilla incluido
+    // en el proyecto para no depender de esa configuración del servidor.
+    $bundleCA = __DIR__ . '/cacert.pem';
+    if (is_file($bundleCA)) {
+        $opciones[CURLOPT_CAINFO] = $bundleCA;
+    }
+    curl_setopt_array($ch, $opciones);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($response === false) {
+        error_log('verificarTokenGoogle: fallo de cURL - ' . $curlError);
+        return null;
+    }
+    if ($httpCode !== 200) return null;
+
+    $payload = json_decode($response, true);
+    if (!is_array($payload)) return null;
+
+    $issuerValido     = in_array($payload['iss'] ?? '', ['accounts.google.com', 'https://accounts.google.com'], true);
+    $audienciaValida  = ($payload['aud'] ?? '') === GOOGLE_CLIENT_ID;
+    $correoVerificado = filter_var($payload['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+    if (!$issuerValido || !$audienciaValida || !$correoVerificado || empty($payload['email'])) {
+        return null;
+    }
+    return $payload;
+}
+
+// =============================================
 // CONFIGURACIÓN SMTP (envío de correo con PHPMailer)
 // =============================================
 // Genera una "contraseña de aplicación" en https://myaccount.google.com/apppasswords

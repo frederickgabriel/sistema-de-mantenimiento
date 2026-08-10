@@ -228,6 +228,26 @@ a:hover { text-decoration: underline; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
+/* Separador "o continúa con" antes del botón de Google */
+.google-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 22px 0 16px;
+    color: #999;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.google-divider::before,
+.google-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+}
+.google-divider span { padding: 0 12px; }
+
 /* ---- FORMS ---- */
 .form-group { margin-bottom: 18px; }
 .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }

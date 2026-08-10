@@ -68,7 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=8">
+    <link rel="stylesheet" href="/css/estilos.css?v=9">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -166,11 +167,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             </div>
 
+            <div class="google-divider"><span>o continúa con</span></div>
+
+            <div id="g_id_onload"
+                 data-client_id="<?= e(GOOGLE_CLIENT_ID) ?>"
+                 data-callback="handleGoogleLogin"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" style="display:flex;justify-content:center"
+                 data-type="standard" data-size="large" data-theme="outline"
+                 data-text="signin_with" data-shape="rectangular" data-width="320">
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
+async function handleGoogleLogin(response) {
+    try {
+        const res  = await fetch('/actions/google_login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'credential=' + encodeURIComponent(response.credential)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            window.location.href = '/pages/dashboard.php';
+        } else {
+            window.location.href = '/index.php?err=' + encodeURIComponent(data.error || 'No se pudo iniciar sesión con Google.');
+        }
+    } catch (e) {
+        window.location.href = '/index.php?err=' + encodeURIComponent('Error de conexión con Google.');
+    }
+}
 function switchTab(name) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
