@@ -120,6 +120,45 @@ if ($esAdm) {
 
 </aside>
 
+<!-- Modal de confirmación reutilizable (reemplaza confirm() nativo) -->
+<div class="modal-overlay" id="zcOverlay">
+    <div class="modal-box zc-box">
+        <div class="zc-icon tone-default" id="zcIcon"><span class="material-symbols-outlined">help</span></div>
+        <div class="zc-title" id="zcTitle">¿Confirmar acción?</div>
+        <div class="zc-msg" id="zcMsg"></div>
+        <div class="zc-actions">
+            <button type="button" class="btn btn-ghost" id="zcCancel">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="zcOk">Aceptar</button>
+        </div>
+    </div>
+</div>
+
+<?php if (isset($_SESSION['usuario'])): ?>
+<!-- Asistente Zilara (motor local basado en reglas) -->
+<button class="chat-fab" id="chatFab" aria-label="Abrir asistente" title="Asistente Zilara">
+    <span class="material-symbols-outlined">smart_toy</span>
+    <span class="chat-fab-dot" id="chatFabDot"></span>
+</button>
+<div class="chat-panel" id="chatPanel" data-user-id="<?= (int)$_SESSION['usuario']['id'] ?>">
+    <div class="chat-panel-header">
+        <div class="chat-avatar"><span class="material-symbols-outlined">smart_toy</span></div>
+        <div class="chat-header-text">
+            <div class="chat-header-title">Asistente Zilara</div>
+            <div class="chat-header-sub">En línea</div>
+        </div>
+        <button type="button" class="chat-close" id="chatCloseBtn" aria-label="Cerrar"><span class="material-symbols-outlined mi-sm">close</span></button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-chips" id="chatChips"></div>
+    <form class="chat-input-row" id="chatForm">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Escribe tu pregunta…" autocomplete="off">
+        <button type="submit" class="chat-send" aria-label="Enviar"><span class="material-symbols-outlined">send</span></button>
+    </form>
+</div>
+<script src="/js/asistente.js" defer></script>
+<?php endif; ?>
+
+<script src="/js/ui.js"></script>
 <script>
 function sbToggle() {
     const sb  = document.getElementById('sidebar');

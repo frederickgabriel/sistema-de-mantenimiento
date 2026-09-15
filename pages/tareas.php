@@ -68,9 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!puedeGestionar($esAdm,$actual,$miId)) { $msg="❌ No tienes permiso sobre esa tarea."; }
         else { $db->prepare("DELETE FROM Tareas WHERE id_tarea=?")->execute([$id]); $msg="🗑 Tarea eliminada."; }
     }
-    header("Location: /pages/tareas.php?msg=".urlencode($msg)."&estado=".urlencode($_GET['estado']??'')."&empleado=".urlencode($_GET['empleado']??'')); exit;
+    flash('msg', $msg);
+    header("Location: /pages/tareas.php?estado=".urlencode($_GET['estado']??'')."&empleado=".urlencode($_GET['empleado']??'')); exit;
 }
-if (isset($_GET['msg'])) $msg=$_GET['msg'];
+$msg = getFlash('msg') ?? '';
 $filtroEstado=$_GET['estado']??'';
 $filtroEmpleado = $esAdm ? (int)($_GET['empleado']??0) : 0;
 
@@ -93,7 +94,7 @@ $equipos=$db->query("SELECT numero_inventario,modelo FROM Equipos WHERE estado !
 $usuarios=$db->query("SELECT id_usuario,nombre,cargo FROM Usuarios ORDER BY nombre")->fetchAll();
 $estados=['Pendiente','En Proceso','Realizado','No Realizado'];
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=8"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=10"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">checklist</span> Tareas</div><div class="page-subtitle"><?= $esAdm ? 'Actividades pendientes y seguimiento' : 'Tus tareas asignadas' ?></div></div><div class="page-actions"><button class="btn btn-primary" onclick="openModal('modalNuevaTarea')">+ Nueva Tarea</button></div></div>
@@ -133,7 +134,7 @@ $estados=['Pendiente','En Proceso','Realizado','No Realizado'];
         <?php if($t['fecha_completado']): ?><small class="text-muted" style="display:block;margin-top:4px">Completada: <?= fechaES($t['fecha_completado']) ?></small><?php endif; ?>
         </td>
         <td class="text-secondary" style="font-size:13px"><?php if($t['asignado_nombre']): ?><div style="display:flex;align-items:center;gap:6px"><?= avatarChip($t['asignado_foto'],$t['asignado_nombre'],22) ?> <?= e($t['asignado_nombre']) ?></div><?php else: ?>—<?php endif; ?></td>
-        <td><div style="display:flex;gap:6px"><button class="btn btn-warning btn-sm btn-icon" onclick="abrirEditar(<?= htmlspecialchars(json_encode($t),ENT_QUOTES) ?>)"><span class="material-symbols-outlined mi-sm">edit</span></button><form method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar?')"><input type="hidden" name="action" value="eliminar_tarea"><input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>"><button type="submit" class="btn btn-danger btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button></form></div></td>
+        <td><div style="display:flex;gap:6px"><button class="btn btn-warning btn-sm btn-icon" onclick="abrirEditar(<?= htmlspecialchars(json_encode($t),ENT_QUOTES) ?>)"><span class="material-symbols-outlined mi-sm">edit</span></button><form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta tarea?','danger')"><input type="hidden" name="action" value="eliminar_tarea"><input type="hidden" name="id_tarea" value="<?= $t['id_tarea'] ?>"><button type="submit" class="btn btn-danger btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button></form></div></td>
     </tr>
     <?php endforeach; ?></tbody></table><?php endif; ?>
     </div>

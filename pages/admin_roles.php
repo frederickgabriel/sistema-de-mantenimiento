@@ -114,14 +114,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (PDOException $e) {
         $msg = '❌ Error de base de datos: ' . $e->getMessage();
-        header("Location: /pages/admin_roles.php?msg=" . urlencode($msg));
+        flash('msg', $msg);
+        header("Location: /pages/admin_roles.php");
         exit;
     }
-    header("Location: /pages/admin_roles.php?msg=" . urlencode($msg));
+    flash('msg', $msg);
+    header("Location: /pages/admin_roles.php");
     exit;
 }
 
-if (isset($_GET['msg'])) $msg = $_GET['msg'];
+$msg = getFlash('msg') ?? '';
 
 // Cargar solicitudes
 try {
@@ -152,9 +154,13 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
+    <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
+    <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=8">
+    <link rel="stylesheet" href="/css/estilos.css?v=10">
     <style>
         .solicitud-card {
             background: var(--bg-card);
@@ -319,7 +325,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                     <div style="display:flex;align-items:center;gap:6px">
                                         <span class="badge-estado <?= $bc ?>"><?= $bi ?> <?= e($s['estado']) ?></span>
                                         <?php if ($s['estado'] !== 'Pendiente'): ?>
-                                        <form method="POST" onsubmit="return confirm('¿Eliminar esta solicitud del historial?')">
+                                        <form method="POST" onsubmit="return zConfirm(this,'¿Eliminar esta solicitud del historial?','danger')">
                                             <input type="hidden" name="action" value="eliminar_solicitud">
                                             <input type="hidden" name="id_solicitud" value="<?= $s['id_solicitud'] ?>">
                                             <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Eliminar solicitud" style="color:var(--text-muted)"><span class="material-symbols-outlined mi-sm">close</span></button>
@@ -406,32 +412,32 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                 </div>
                                 <?php if ($u['id_usuario'] != $_SESSION['usuario']['id']): ?>
                                     <?php if ($u['rol'] === 'usuario'): ?>
-                                        <form method="POST" onsubmit="return confirm('¿Dar rol Admin a <?= e($u['nombre']) ?>?')">
+                                        <form method="POST" onsubmit="return zConfirm(this,'¿Dar rol Admin a <?= e($u['nombre']) ?>?','default')">
                                             <input type="hidden" name="action" value="dar_admin">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
                                             <button class="btn btn-ghost btn-sm" style="font-size:11px"><span class="material-symbols-outlined mi-xs">admin_panel_settings</span> Dar Admin</button>
                                         </form>
                                     <?php else: ?>
-                                        <form method="POST" onsubmit="return confirm('¿Quitar rol Admin a <?= e($u['nombre']) ?>?')">
+                                        <form method="POST" onsubmit="return zConfirm(this,'¿Quitar rol Admin a <?= e($u['nombre']) ?>?','danger')">
                                             <input type="hidden" name="action" value="quitar_admin">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
                                             <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)"><span class="material-symbols-outlined mi-xs">undo</span> Quitar Admin</button>
                                         </form>
                                     <?php endif; ?>
                                     <?php if ($inactivo): ?>
-                                        <form method="POST" onsubmit="return confirm('¿Reactivar a <?= e($u['nombre']) ?>? Podrá iniciar sesión de nuevo.')">
+                                        <form method="POST" onsubmit="return zConfirm(this,'¿Reactivar a <?= e($u['nombre']) ?>? Podrá iniciar sesión de nuevo.','default')">
                                             <input type="hidden" name="action" value="reactivar_usuario">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
                                             <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--success)"><span class="material-symbols-outlined mi-xs">check_circle</span> Reactivar</button>
                                         </form>
                                     <?php else: ?>
-                                        <form method="POST" onsubmit="return confirm('¿Dar de baja a <?= e($u['nombre']) ?>? No podrá iniciar sesión hasta que lo reactives. Su historial se conserva.')">
+                                        <form method="POST" onsubmit="return zConfirm(this,'¿Dar de baja a <?= e($u['nombre']) ?>? No podrá iniciar sesión hasta que lo reactives. Su historial se conserva.','danger')">
                                             <input type="hidden" name="action" value="desactivar_usuario">
                                             <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
                                             <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--warning)"><span class="material-symbols-outlined mi-xs">block</span> Dar de baja</button>
                                         </form>
                                     <?php endif; ?>
-                                    <form method="POST" onsubmit="return confirm('¿ELIMINAR PERMANENTEMENTE la cuenta de <?= e($u['nombre']) ?>? Esta acción no se puede deshacer.')">
+                                    <form method="POST" onsubmit="return zConfirm(this,'¿ELIMINAR PERMANENTEMENTE la cuenta de <?= e($u['nombre']) ?>? Esta acción no se puede deshacer.','danger')">
                                         <input type="hidden" name="action" value="eliminar_usuario">
                                         <input type="hidden" name="id_usuario" value="<?= $u['id_usuario'] ?>">
                                         <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)"><span class="material-symbols-outlined mi-xs">delete_forever</span> Eliminar</button>

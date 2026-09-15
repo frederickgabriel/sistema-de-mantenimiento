@@ -14,7 +14,8 @@ $stmt->execute([$id]);
 $empleado = $stmt->fetch();
 
 if (!$empleado) {
-    header("Location: /pages/empleados.php?msg=" . urlencode("❌ Empleado no encontrado."));
+    flash('msg', "❌ Empleado no encontrado.");
+    header("Location: /pages/empleados.php");
     exit;
 }
 
@@ -52,7 +53,7 @@ $tareasRealizadas = count(array_filter($tareas, fn($t) => $t['estado'] === 'Real
 $tareasPendientes = count(array_filter($tareas, fn($t) => in_array($t['estado'], ['Pendiente', 'En Proceso'])));
 $volver = '/pages/empleado_detalle.php?id=' . $id;
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title><?= e($empleado['nombre']) ?> — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=8"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title><?= e($empleado['nombre']) ?> — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=10"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header">
@@ -156,7 +157,7 @@ function abrirFotos(idMtto, inventario, fotos){
         item.className = 'evidencia-item evidencia-item-manage';
         item.innerHTML = `
             <img src="${src}" onclick="abrirLightbox('${src}')">
-            <form method="POST" action="/pages/mantenimientos.php" onsubmit="return confirm('¿Eliminar esta foto?')">
+            <form method="POST" action="/pages/mantenimientos.php" onsubmit="return zConfirm(this,'¿Eliminar esta foto?','danger')">
                 <input type="hidden" name="action" value="eliminar_evidencia">
                 <input type="hidden" name="id_evidencia" value="${f.id}">
                 <input type="hidden" name="volver" value="<?= e($volver) ?>">

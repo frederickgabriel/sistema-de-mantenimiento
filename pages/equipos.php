@@ -12,7 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // BLOQUEO: todas estas acciones son solo para Admin
     $soloAdmin = ['nueva_area', 'eliminar_area', 'nuevo_equipo', 'editar_equipo', 'eliminar_equipo'];
     if (in_array($action, $soloAdmin) && !esAdmin()) {
-        header("Location: /pages/equipos.php?msg=" . urlencode("❌ No tienes permisos. Solo el Administrador puede realizar esta acción."));
+        flash('msg', "❌ No tienes permisos. Solo el Administrador puede realizar esta acción.");
+        header("Location: /pages/equipos.php");
         exit;
     }
 
@@ -63,11 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = "🗑 Equipo eliminado.";
     }
 
-    header("Location: /pages/equipos.php?msg=" . urlencode($msg ?: $err));
+    flash('msg', $msg ?: $err);
+    header("Location: /pages/equipos.php");
     exit;
 }
 
-if (isset($_GET['msg'])) $msg = $_GET['msg'];
+$msg = getFlash('msg') ?? '';
 
 // Filtros del inventario (los equipos dados de Baja no se listan aquí — viven en el módulo de Bajas)
 $filtroArea   = (int)($_GET['area'] ?? 0);
@@ -92,9 +94,13 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
+    <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
+    <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=8">
+    <link rel="stylesheet" href="/css/estilos.css?v=10">
 </head>
 <body>
 <div class="app-layout">
@@ -150,7 +156,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                         <td><span class="badge-estado badge-proceso"><?= $a['total_equipos'] ?> equipos</span></td>
                         <?php if (esAdmin()): ?>
                         <td>
-                            <form method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar esta área?')">
+                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta área?','danger')">
                                 <input type="hidden" name="action"  value="eliminar_area">
                                 <input type="hidden" name="id_area" value="<?= $a['id_area'] ?>">
                                 <button type="submit" class="btn btn-danger btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button>
@@ -240,7 +246,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                                 <button class="btn btn-warning btn-sm btn-icon" title="Editar"
                                     onclick="abrirEditar(<?= htmlspecialchars(json_encode($eq), ENT_QUOTES) ?>)"><span class="material-symbols-outlined mi-sm">edit</span></button>
                                 <form method="POST" style="display:inline"
-                                      onsubmit="return confirm('¿Eliminar el equipo <?= e($eq['numero_inventario']) ?>?')">
+                                      onsubmit="return zConfirm(this,'¿Eliminar el equipo <?= e($eq['numero_inventario']) ?>?','danger')">
                                     <input type="hidden" name="action" value="eliminar_equipo">
                                     <input type="hidden" name="numero_inventario" value="<?= e($eq['numero_inventario']) ?>">
                                     <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar"><span class="material-symbols-outlined mi-sm">delete</span></button>

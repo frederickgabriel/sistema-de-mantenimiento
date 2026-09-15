@@ -60,6 +60,19 @@ function e(mixed $val): string {
     return htmlspecialchars((string)$val, ENT_QUOTES, 'UTF-8');
 }
 
+// Guarda un mensaje flash en sesión para leerlo justo después del redirect,
+// evitando que viaje (y se vea feo, con emoji y todo) en la URL vía ?msg=...
+function flash(string $key, string $msg): void {
+    $_SESSION['flash'][$key] = $msg;
+}
+
+// Lee y limpia un mensaje flash guardado con flash()
+function getFlash(string $key): ?string {
+    $msg = $_SESSION['flash'][$key] ?? null;
+    unset($_SESSION['flash'][$key]);
+    return $msg;
+}
+
 // Renderiza un mensaje flash ($msg/$err) sustituyendo su emoji inicial por un ícono Material Symbols
 function renderMsg(?string $msg): string {
     if (!$msg) return '';
@@ -302,4 +315,45 @@ function enviarEmailSolicitudRol(string $nombreUsuario, string $cargoUsuario, st
         return false;
     }
 }
- 
+
+// Enviar por correo al admin un reporte de falla/incidencia levantado desde el chatbot (PHPMailer + SMTP)
+function enviarEmailReporteFalla(string $nombreUsuario, string $cargoUsuario, string $correoUsuario, string $descripcion): bool {
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USER;
+        $mail->Password   = SMTP_PASS;
+        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = SMTP_PORT;
+        $mail->CharSet    = 'UTF-8';
+
+        $mail->setFrom(SMTP_USER, SMTP_FROM_NAME);
+        $mail->addAddress(ADMIN_EMAIL);
+        $mail->addReplyTo($correoUsuario, $nombreUsuario);
+
+        $mail->isHTML(true);
+        $mail->Subject = '[ManteTech] Reporte de falla — ' . $nombreUsuario;
+        $mail->Body    = '
+            <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#1f2328">
+                <h2 style="margin-bottom:4px">Reporte de falla (Asistente Zilara)</h2>
+                <p>Un usuario reportó un problema desde el chatbot del sistema:</p>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                    <tr><td style="padding:4px 0;color:#57606a">Nombre</td><td style="padding:4px 0"><strong>' . e($nombreUsuario) . '</strong></td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">Cargo</td><td style="padding:4px 0">' . e($cargoUsuario) . '</td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">Correo</td><td style="padding:4px 0">' . e($correoUsuario) . '</td></tr>
+                    <tr><td style="padding:4px 0;color:#57606a">Fecha</td><td style="padding:4px 0">' . date('d/m/Y H:i') . '</td></tr>
+                </table>
+                <p style="color:#57606a">Descripción del problema:</p>
+                <p style="background:#f6f8fa;border-left:3px solid #d0d7de;padding:10px 14px;border-radius:0 6px 6px 0">' . nl2br(e($descripcion)) . '</p>
+            </div>';
+        $mail->AltBody = "El usuario {$nombreUsuario} ({$cargoUsuario}, {$correoUsuario}) reportó un problema desde el chatbot:\n\n{$descripcion}";
+
+        $mail->send();
+        return true;
+    } catch (PHPMailer\PHPMailer\Exception $e) {
+        error_log('Error enviando email de reporte de falla: ' . $mail->ErrorInfo);
+        return false;
+    }
+}

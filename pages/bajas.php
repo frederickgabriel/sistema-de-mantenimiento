@@ -48,7 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    ->execute([$inv]);
 
                 $idBaja = $db->lastInsertId();
-                header("Location: /pages/bajas.php?msg=" . urlencode("✅ Baja registrada correctamente.") . "&ver_pdf={$idBaja}");
+                flash('msg', "✅ Baja registrada correctamente.");
+                header("Location: /pages/bajas.php?ver_pdf={$idBaja}");
                 exit;
             } catch (PDOException $e) {
                 $msg = "❌ Error al registrar la baja: " . $e->getMessage();
@@ -65,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $obs     = trim($_POST['observaciones_validacion'] ?? '');
         $db->prepare("UPDATE Bajas SET estado_validacion=?, observaciones_validacion=?, fecha_validacion=NOW() WHERE id_baja=?")
            ->execute([$estado, $obs, $id]);
-        header("Location: /pages/bajas.php?msg=" . urlencode("✅ Baja {$estado} correctamente."));
+        flash('msg', "✅ Baja {$estado} correctamente.");
+        header("Location: /pages/bajas.php");
         exit;
     }
 
@@ -75,16 +77,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $inv = trim($_POST['numero_inventario'] ?? '');
         $db->prepare("DELETE FROM Bajas WHERE id_baja=?")->execute([$id]);
         $db->prepare("UPDATE Equipos SET estado='Inactivo' WHERE numero_inventario=?")->execute([$inv]);
-        header("Location: /pages/bajas.php?msg=" . urlencode("🗑 Baja eliminada. Equipo reactivado como Inactivo."));
+        flash('msg', "🗑 Baja eliminada. Equipo reactivado como Inactivo.");
+        header("Location: /pages/bajas.php");
         exit;
     }
 
-    header("Location: /pages/bajas.php?msg=" . urlencode($msg));
+    flash('msg', $msg);
+    header("Location: /pages/bajas.php");
     exit;
 }
 
 // Leer mensajes
-if (isset($_GET['msg'])) $msg = $_GET['msg'];
+$msg = getFlash('msg') ?? '';
 $verPdf = isset($_GET['ver_pdf']) ? (int)$_GET['ver_pdf'] : 0;
 
 // Cargar bajas
@@ -126,9 +130,13 @@ if ($verPdf) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
+    <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
+    <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=8">
+    <link rel="stylesheet" href="/css/estilos.css?v=10">
     <style>
         .baja-card {
             background: var(--bg-card);
@@ -269,7 +277,7 @@ if ($verPdf) {
                         <button class="btn btn-success btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Validado')"><span class="material-symbols-outlined mi-sm">check_circle</span> Validar</button>
                         <button class="btn btn-danger btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Rechazado')"><span class="material-symbols-outlined mi-sm">cancel</span> Rechazar</button>
                         <?php endif; ?>
-                        <form method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar esta baja? El equipo volverá a estado Inactivo.')">
+                        <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta baja? El equipo volverá a estado Inactivo.','danger')">
                             <input type="hidden" name="action" value="eliminar_baja">
                             <input type="hidden" name="id_baja" value="<?= $b['id_baja'] ?>">
                             <input type="hidden" name="numero_inventario" value="<?= e($b['numero_inventario']) ?>">

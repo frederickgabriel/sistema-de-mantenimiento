@@ -198,15 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Redirigir para evitar reenvío de formulario
     if ($msg || $err) {
-        $param = $msg ? 'msg=' . urlencode($msg) : 'err=' . urlencode($err);
-        header("Location: /pages/configuracion.php?tab={$tab}&{$param}");
+        if ($msg) flash('msg', $msg); else flash('err', $err);
+        header("Location: /pages/configuracion.php?tab={$tab}");
         exit;
     }
 }
 
 // Leer mensajes de redirección
-if (isset($_GET['msg'])) $msg = $_GET['msg'];
-if (isset($_GET['err'])) $err = $_GET['err'];
+$msg = getFlash('msg') ?? '';
+$err = getFlash('err') ?? '';
 
 // URL de la foto de perfil
 function fotoURL(?string $foto): string {
@@ -222,9 +222,13 @@ $iniciales  = substr($iniciales, 0, 2);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
+    <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
+    <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Configuración — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=8">
+    <link rel="stylesheet" href="/css/estilos.css?v=10">
     <style>
         /* ---- Layout configuración ---- */
         .config-layout {
@@ -578,7 +582,7 @@ $iniciales  = substr($iniciales, 0, 2);
                                     <!-- Eliminar foto -->
                                     <?php if ($usuario['foto_perfil'] ?? null): ?>
                                     <form method="POST" action="/pages/configuracion.php"
-                                          onsubmit="return confirm('¿Eliminar tu foto de perfil?')">
+                                          onsubmit="return zConfirm(this,'¿Eliminar tu foto de perfil?','danger')">
                                         <input type="hidden" name="action" value="eliminar_foto">
                                         <button type="submit" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">delete</span> Eliminar foto</button>
                                     </form>
