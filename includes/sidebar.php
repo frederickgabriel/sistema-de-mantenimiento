@@ -103,7 +103,6 @@ if ($esAdm) {
             <?php if ($esAdm): ?>
                 <?= navLink('bajas.php',      'delete_forever',   'Bajas de Equipos', $currentPage) ?>
                 <?= navLink('empleados.php',  'groups',           'Empleados',        $currentPage) ?>
-                <?= navLink('marca.php',      'palette',          'Marca / Reportes', $currentPage) ?>
                 <li>
                     <a href="/pages/admin_roles.php" class="nav-item <?= $currentPage==='admin_roles.php' ? 'active' : '' ?>" title="Gestión de Roles">
                         <span class="material-symbols-outlined nav-icon">admin_panel_settings</span>
