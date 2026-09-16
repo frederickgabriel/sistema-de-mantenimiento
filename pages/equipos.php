@@ -30,17 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = '🗑 Área eliminada.';
 
     } elseif ($action === 'nuevo_equipo') {
-        $inv   = trim($_POST['numero_inventario'] ?? '');
-        $model = trim($_POST['modelo'] ?? '');
-        $marca = trim($_POST['marca'] ?? '');
-        $proc  = trim($_POST['procesador'] ?? '');
-        $ram   = trim($_POST['ram'] ?? '');
-        $disco = trim($_POST['disco'] ?? '');
-        $area  = $_POST['id_area'] ?: null;
+        $inv    = trim($_POST['numero_inventario'] ?? '');
+        $model  = trim($_POST['modelo'] ?? '');
+        $marca  = trim($_POST['marca'] ?? '');
+        $serie  = trim($_POST['numero_serie'] ?? '');
+        $proc   = trim($_POST['procesador'] ?? '');
+        $ram    = trim($_POST['ram'] ?? '');
+        $disco  = trim($_POST['disco'] ?? '');
+        $area   = $_POST['id_area'] ?: null;
+        $dueno  = trim($_POST['usuario_dueno'] ?? '');
         if ($inv && $model) {
             try {
-                $db->prepare("INSERT INTO Equipos (numero_inventario,modelo,marca,procesador,ram,disco,id_area,estado) VALUES (?,?,?,?,?,?,?,'Activo')")
-                   ->execute([$inv, $model, $marca, $proc, $ram, $disco, $area]);
+                $db->prepare("INSERT INTO Equipos (numero_inventario,modelo,marca,numero_serie,procesador,ram,disco,id_area,usuario_dueno,estado) VALUES (?,?,?,?,?,?,?,?,?,'Activo')")
+                   ->execute([$inv, $model, $marca, $serie, $proc, $ram, $disco, $area, $dueno]);
                 $msg = "✅ Equipo «{$inv}» registrado.";
             } catch (PDOException $e) {
                 $err = $e->getCode() == 23000 ? 'Ese número de inventario ya existe.' : 'Error al guardar el equipo.';
@@ -49,12 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'editar_equipo') {
         $inv = trim($_POST['numero_inventario'] ?? '');
-        $db->prepare("UPDATE Equipos SET modelo=?,marca=?,procesador=?,ram=?,disco=?,estado=?,id_area=? WHERE numero_inventario=?")
+        $db->prepare("UPDATE Equipos SET modelo=?,marca=?,numero_serie=?,procesador=?,ram=?,disco=?,estado=?,id_area=?,usuario_dueno=? WHERE numero_inventario=?")
            ->execute([
                trim($_POST['modelo'] ?? ''), trim($_POST['marca'] ?? ''),
+               trim($_POST['numero_serie'] ?? ''),
                trim($_POST['procesador'] ?? ''), trim($_POST['ram'] ?? ''),
                trim($_POST['disco'] ?? ''), $_POST['estado'] ?? 'Activo',
-               $_POST['id_area'] ?: null, $inv
+               $_POST['id_area'] ?: null, trim($_POST['usuario_dueno'] ?? ''), $inv
            ]);
         $msg = "✅ Equipo «{$inv}» actualizado.";
 
@@ -100,7 +103,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
 </head>
 <body>
 <div class="app-layout">
@@ -151,8 +154,8 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                     <?php foreach ($areas as $a): ?>
                     <tr>
                         <td class="text-muted" style="font-size:12px"><?= e($a['id_area']) ?></td>
-                        <td><strong><?= e($a['nombre_area']) ?></strong></td>
-                        <td class="text-secondary"><?= e($a['ubicacion'] ?? '—') ?></td>
+                        <td><strong class="text-clip" title="<?= e($a['nombre_area']) ?>" style="max-width:200px"><?= e($a['nombre_area']) ?></strong></td>
+                        <td class="text-secondary"><span class="text-clip" title="<?= e($a['ubicacion'] ?? '') ?>" style="max-width:200px"><?= e($a['ubicacion'] ?? '—') ?></span></td>
                         <td><span class="badge-estado badge-proceso"><?= $a['total_equipos'] ?> equipos</span></td>
                         <?php if (esAdmin()): ?>
                         <td>
@@ -172,6 +175,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         </div>
 
         <!-- EQUIPOS -->
+        <div id="ajaxFiltroZona">
         <div class="card">
             <div class="card-header">
                 <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Inventario de Equipos</div>
@@ -180,7 +184,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
             <div style="display:flex;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border-light)">
                 <div class="form-group" style="margin-bottom:0;min-width:180px">
                     <label>Área</label>
-                    <select onchange="location.href='/pages/equipos.php?area='+this.value+'&estado=<?= urlencode($filtroEstado) ?>&orden=<?= urlencode($orden) ?>'">
+                    <select onchange="ajaxFiltro('/pages/equipos.php?area='+this.value+'&estado=<?= urlencode($filtroEstado) ?>&orden=<?= urlencode($orden) ?>')">
                         <option value="">Todas las áreas</option>
                         <?php foreach ($areasSelect as $a): ?>
                         <option value="<?= $a['id_area'] ?>" <?= $filtroArea===(int)$a['id_area']?'selected':'' ?>><?= e($a['nombre_area']) ?></option>
@@ -189,7 +193,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 </div>
                 <div class="form-group" style="margin-bottom:0;min-width:180px">
                     <label>Estado</label>
-                    <select onchange="location.href='/pages/equipos.php?area=<?= $filtroArea ?>&estado='+this.value+'&orden=<?= urlencode($orden) ?>'">
+                    <select onchange="ajaxFiltro('/pages/equipos.php?area=<?= $filtroArea ?>&estado='+this.value+'&orden=<?= urlencode($orden) ?>')">
                         <option value="">Todos los estados</option>
                         <?php foreach ($estadosValidos as $es): ?>
                         <option value="<?= $es ?>" <?= $filtroEstado===$es?'selected':'' ?>><?= $es==='En Reparacion'?'En Reparación':$es ?></option>
@@ -198,14 +202,14 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 </div>
                 <div class="form-group" style="margin-bottom:0;min-width:180px">
                     <label>Ordenar por</label>
-                    <select onchange="location.href='/pages/equipos.php?area=<?= $filtroArea ?>&estado=<?= urlencode($filtroEstado) ?>&orden='+this.value">
+                    <select onchange="ajaxFiltro('/pages/equipos.php?area=<?= $filtroArea ?>&estado=<?= urlencode($filtroEstado) ?>&orden='+this.value)">
                         <option value="recientes" <?= $orden==='recientes'?'selected':'' ?>>Más reciente primero</option>
                         <option value="antiguos" <?= $orden==='antiguos'?'selected':'' ?>>Menos reciente primero</option>
                     </select>
                 </div>
                 <?php if ($filtroArea || $filtroEstado || $orden !== 'recientes'): ?>
                 <div style="align-self:flex-end">
-                    <a href="/pages/equipos.php" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">close</span> Quitar filtros</a>
+                    <a href="/pages/equipos.php" class="btn btn-ghost btn-sm" onclick="return ajaxFiltro(this.href)"><span class="material-symbols-outlined mi-sm">close</span> Quitar filtros</a>
                 </div>
                 <?php endif; ?>
             </div>
@@ -223,21 +227,29 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                     <tbody>
                     <?php foreach ($equipos as $eq): ?>
                     <tr>
-                        <td class="text-mono"><?= e($eq['numero_inventario']) ?></td>
+                        <td class="text-mono">
+                            <span class="text-clip" title="<?= e($eq['numero_inventario']) ?>"><?= e($eq['numero_inventario']) ?></span>
+                        </td>
                         <td>
-                            <strong><?= e($eq['modelo']) ?></strong>
-                            <?php if ($eq['marca']): ?><br><small class="text-muted"><?= e($eq['marca']) ?></small><?php endif; ?>
+                            <strong class="text-clip" title="<?= e($eq['modelo']) ?>"><?= e($eq['modelo']) ?></strong>
+                            <?php if ($eq['marca']): ?><br><small class="text-muted text-clip" title="<?= e($eq['marca']) ?>"><?= e($eq['marca']) ?></small><?php endif; ?>
                         </td>
                         <td class="text-secondary" style="font-size:12px">
                             <?php
                             $specs = array_filter([$eq['procesador'], $eq['ram'] ? $eq['ram'].' RAM' : null, $eq['disco']]);
-                            echo implode(' · ', $specs) ?: '—';
+                            $specsTxt = implode(' · ', $specs) ?: '—';
                             ?>
+                            <span class="text-clip" title="<?= e($specsTxt) ?>" style="max-width:260px"><?= e($specsTxt) ?></span>
                         </td>
-                        <td class="text-secondary"><?= e($eq['nombre_area'] ?? '—') ?></td>
+                        <td class="text-secondary">
+                            <span class="text-clip" title="<?= e($eq['nombre_area'] ?? '') ?>"><?= e($eq['nombre_area'] ?? '—') ?></span>
+                        </td>
                         <td><?= badgeEstado($eq['estado']) ?></td>
                         <td>
                             <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                <!-- Ver detalle completo: todos los usuarios -->
+                                <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Ver detalle"
+                                    onclick="abrirDetalleEquipo(<?= htmlspecialchars(json_encode($eq), ENT_QUOTES) ?>)"><span class="material-symbols-outlined mi-sm">visibility</span></button>
                                 <!-- Ver mantenimientos: todos los usuarios -->
                                 <a href="/pages/mantenimientos.php?equipo=<?= urlencode($eq['numero_inventario']) ?>"
                                    class="btn btn-ghost btn-sm btn-icon" title="Mantenimientos"><span class="material-symbols-outlined mi-sm">build</span></a>
@@ -260,6 +272,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 </table>
                 <?php endif; ?>
             </div>
+        </div>
         </div>
 
     </main>
@@ -300,6 +313,9 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Marca</label><input type="text" name="marca" placeholder="Dell, HP..."></div>
+                    <div class="form-group"><label>Número de Serie</label><input type="text" name="numero_serie" placeholder="S/N del fabricante"></div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Área / Salón</label>
                         <select name="id_area"><option value="">Sin asignar</option>
@@ -307,6 +323,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                             <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
                         <?php endforeach; ?></select>
                     </div>
+                    <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" placeholder="Nombre de quien usa el equipo (no requiere cuenta en el sistema)"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Procesador</label><input type="text" name="procesador" placeholder="Intel i5-10400"></div>
@@ -335,11 +352,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                     <div class="form-group"><label>Marca</label><input type="text" name="marca" id="editMarca"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Procesador</label><input type="text" name="procesador" id="editProc"></div>
-                    <div class="form-group"><label>RAM</label><input type="text" name="ram" id="editRam"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Disco</label><input type="text" name="disco" id="editDisco"></div>
+                    <div class="form-group"><label>Número de Serie</label><input type="text" name="numero_serie" id="editSerie"></div>
                     <div class="form-group">
                         <label>Estado</label>
                         <select name="estado" id="editEstado">
@@ -349,12 +362,20 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Área / Salón</label>
-                    <select name="id_area" id="editArea"><option value="">Sin asignar</option>
-                    <?php foreach ($areasSelect as $a): ?>
-                        <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
-                    <?php endforeach; ?></select>
+                <div class="form-row">
+                    <div class="form-group"><label>Procesador</label><input type="text" name="procesador" id="editProc"></div>
+                    <div class="form-group"><label>RAM</label><input type="text" name="ram" id="editRam"></div>
+                </div>
+                <div class="form-group"><label>Disco</label><input type="text" name="disco" id="editDisco"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Área / Salón</label>
+                        <select name="id_area" id="editArea"><option value="">Sin asignar</option>
+                        <?php foreach ($areasSelect as $a): ?>
+                            <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
+                        <?php endforeach; ?></select>
+                    </div>
+                    <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" id="editDueno" placeholder="Nombre de quien usa el equipo"></div>
                 </div>
                 <button type="submit" class="btn btn-warning btn-full">Guardar Cambios</button>
             </form>
@@ -363,22 +384,49 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 </div>
 <?php endif; // fin if esAdmin() modales ?>
 
+<!-- Modal: Ver Detalle de Equipo (todos los usuarios) -->
+<div class="modal-overlay" id="modalDetalleEquipo">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">computer</span> Detalle del Equipo</div>
+            <button class="modal-close" onclick="closeModal('modalDetalleEquipo')"><span class="material-symbols-outlined mi-sm">close</span></button>
+        </div>
+        <div class="modal-body" id="detalleEquipoBody" style="font-size:14px;line-height:1.7"></div>
+    </div>
+</div>
+
 <script>
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
 });
+function abrirDetalleEquipo(eq) {
+    const esc = (s) => (s || '').toString().replace(/</g,'&lt;');
+    const specs = [eq.procesador, eq.ram ? eq.ram + ' RAM' : '', eq.disco].filter(Boolean).join(' · ') || '—';
+    document.getElementById('detalleEquipoBody').innerHTML = `
+        <p><strong>No. Inventario:</strong> ${esc(eq.numero_inventario)}</p>
+        <p><strong>Modelo:</strong> ${esc(eq.modelo)} ${esc(eq.marca)}</p>
+        <p><strong>Número de Serie:</strong> ${esc(eq.numero_serie) || '—'}</p>
+        <p><strong>Especificaciones:</strong> ${esc(specs)}</p>
+        <p><strong>Área:</strong> ${esc(eq.nombre_area) || '—'}</p>
+        <p><strong>Usuario Dueño:</strong> ${esc(eq.usuario_dueno) || '—'}</p>
+        <p><strong>Estado:</strong> ${esc(eq.estado)}</p>
+    `;
+    openModal('modalDetalleEquipo');
+}
 function abrirEditar(eq) {
     document.getElementById('editInvLabel').textContent = eq.numero_inventario;
     document.getElementById('editInv').value    = eq.numero_inventario;
-    document.getElementById('editModelo').value = eq.modelo     || '';
-    document.getElementById('editMarca').value  = eq.marca      || '';
-    document.getElementById('editProc').value   = eq.procesador || '';
-    document.getElementById('editRam').value    = eq.ram        || '';
-    document.getElementById('editDisco').value  = eq.disco      || '';
-    document.getElementById('editEstado').value = eq.estado     || 'Activo';
-    document.getElementById('editArea').value   = eq.id_area    || '';
+    document.getElementById('editModelo').value = eq.modelo       || '';
+    document.getElementById('editMarca').value  = eq.marca        || '';
+    document.getElementById('editSerie').value  = eq.numero_serie || '';
+    document.getElementById('editProc').value   = eq.procesador   || '';
+    document.getElementById('editRam').value    = eq.ram          || '';
+    document.getElementById('editDisco').value  = eq.disco        || '';
+    document.getElementById('editEstado').value = eq.estado       || 'Activo';
+    document.getElementById('editArea').value   = eq.id_area      || '';
+    document.getElementById('editDueno').value  = eq.usuario_dueno || '';
     openModal('modalEditarEquipo');
 }
 </script>

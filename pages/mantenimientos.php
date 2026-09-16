@@ -139,17 +139,19 @@ if ($mantenimientos) {
     foreach ($evStmt->fetchAll() as $ev) { $evidenciasPorMtto[$ev['id_origen']][] = $ev; }
 }
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=10"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=12"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
-<div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">build</span> Mantenimientos</div><div class="page-subtitle"><?= $esAdm ? 'Historial y registro de mantenimientos' : 'Tus mantenimientos registrados' ?></div></div><div class="page-actions"><?php if($filtroEquipo): ?><a href="/pages/mantenimientos.php" class="btn btn-ghost"><span class="material-symbols-outlined mi-sm">close</span> Quitar filtro</a><?php endif; ?><button class="btn btn-primary" onclick="openModal('modalNuevoMtto')">+ Registrar Mantenimiento</button></div></div>
+<div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">build</span> Mantenimientos</div><div class="page-subtitle"><?= $esAdm ? 'Historial y registro de mantenimientos' : 'Tus mantenimientos registrados' ?></div></div><div class="page-actions"><button class="btn btn-primary" onclick="openModal('modalNuevoMtto')">+ Registrar Mantenimiento</button></div></div>
 <?php if($msg): ?><div class="alert <?= str_starts_with($msg,'✅')?'alert-success':(str_starts_with($msg,'🗑')?'alert-info':'alert-error') ?>"><?= renderMsg($msg) ?></div><?php endif; ?>
-<?php if($filtroEquipo): ?><div class="alert alert-info"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">search</span> Mantenimientos del equipo: <strong><?= e($filtroEquipo) ?></strong></div><?php endif; ?>
+
+<div id="ajaxFiltroZona">
+<?php if($filtroEquipo): ?><div class="alert alert-info"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">search</span> Mantenimientos del equipo: <strong><?= e($filtroEquipo) ?></strong> — <a href="/pages/mantenimientos.php" onclick="return ajaxFiltro(this.href)">quitar filtro</a></div><?php endif; ?>
 
 <?php if($esAdm): ?>
 <div class="form-group" style="max-width:280px;margin-bottom:16px">
     <label>Filtrar por técnico</label>
-    <select onchange="location.href='/pages/mantenimientos.php?equipo=<?= urlencode($filtroEquipo) ?>&tecnico='+this.value">
+    <select onchange="ajaxFiltro('/pages/mantenimientos.php?equipo=<?= urlencode($filtroEquipo) ?>&tecnico='+this.value)">
         <option value="">Todos los técnicos</option>
         <?php foreach($usuarios as $u): ?>
         <option value="<?= $u['id_usuario'] ?>" <?= $filtroTecnico===(int)$u['id_usuario']?'selected':'' ?>><?= e($u['nombre']) ?> (<?= e($u['cargo']) ?>)</option>
@@ -169,13 +171,13 @@ if ($mantenimientos) {
         $evs = $evidenciasPorMtto[$m['id_mantenimiento']] ?? [];
     ?>
     <tr>
-        <td><span class="text-mono"><?= e($m['numero_inventario']) ?></span><br><small class="text-muted"><?= e($m['modelo']) ?> <?= e($m['marca']??'') ?></small></td>
-        <td class="text-secondary"><?= e($m['nombre_area']??'—') ?></td>
+        <td><span class="text-mono text-clip" title="<?= e($m['numero_inventario']) ?>" style="max-width:140px"><?= e($m['numero_inventario']) ?></span><br><small class="text-muted text-clip" title="<?= e($m['modelo'].' '.($m['marca']??'')) ?>" style="max-width:180px"><?= e($m['modelo']) ?> <?= e($m['marca']??'') ?></small></td>
+        <td class="text-secondary"><span class="text-clip" title="<?= e($m['nombre_area']??'') ?>"><?= e($m['nombre_area']??'—') ?></span></td>
         <td><?= $m['tipo_mantenimiento']==='Preventivo'?'<span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">shield</span> Preventivo</span>':'<span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">handyman</span> Correctivo</span>' ?><br><span class="badge-estado <?= $completado?'badge-realizado':'badge-pendiente' ?>" style="margin-top:4px"><span class="material-symbols-outlined mi-sm"><?= $completado?'check_circle':'hourglass_empty' ?></span> <?= $completado?'Completado':'En Proceso' ?></span></td>
         <td class="text-secondary"><?= fechaES($m['fecha_realizacion']) ?></td>
         <td class="text-secondary"><?= fechaES($m['fecha_entrega']) ?></td>
         <td><?php if($m['proximo_mantenimiento']){$dias=(int)((strtotime($m['proximo_mantenimiento'])-time())/86400);$c=$dias<0?'danger':($dias<=14?'warning':'success');echo "<span class=\"text-{$c}\">".fechaES($m['proximo_mantenimiento'])."</span>";if($dias<0)echo "<br><small class=\"text-danger\">Vencido ".abs($dias)."d</small>";elseif($dias<=14)echo "<br><small class=\"text-warning\">En {$dias} días</small>";}else echo '<span class="text-muted">—</span>'; ?></td>
-        <td class="text-secondary" style="font-size:13px"><?php if($m['tecnico_nombre']): ?><div style="display:flex;align-items:center;gap:6px"><?= avatarChip($m['tecnico_foto'],$m['tecnico_nombre'],22) ?> <?= e($m['tecnico_nombre']) ?></div><?php else: ?>—<?php endif; ?></td>
+        <td class="text-secondary" style="font-size:13px"><?php if($m['tecnico_nombre']): ?><div style="display:flex;align-items:center;gap:6px;min-width:0"><?= avatarChip($m['tecnico_foto'],$m['tecnico_nombre'],22) ?> <span class="text-clip" title="<?= e($m['tecnico_nombre']) ?>" style="max-width:120px"><?= e($m['tecnico_nombre']) ?></span></div><?php else: ?>—<?php endif; ?></td>
         <td>
             <?php if($puede): ?>
             <button class="btn btn-ghost btn-sm" style="font-size:12px" onclick='abrirFotos(<?= $m["id_mantenimiento"] ?>, <?= json_encode($m["numero_inventario"]) ?>, <?= json_encode(array_map(fn($e)=>["id"=>$e["id_evidencia"],"ruta"=>$e["ruta_imagen"]], $evs)) ?>)'><span class="material-symbols-outlined mi-sm">photo_camera</span> <?= count($evs) ?></button>
@@ -183,9 +185,8 @@ if ($mantenimientos) {
             <span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">photo_camera</span> <?= count($evs) ?></span>
             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
         </td>
-        <td style="max-width:160px;font-size:12px;color:var(--text-secondary)">
-            <?= e(mb_substr($m['detalles']??'',0,60)) ?><?= strlen($m['detalles']??'')>60?'…':'' ?>
-            <button class="btn btn-ghost btn-sm btn-icon" style="margin-top:4px" title="Ver detalle" onclick='abrirDetalle(<?= json_encode([
+        <td style="font-size:12px;color:var(--text-secondary)">
+            <button class="btn btn-ghost btn-sm btn-icon" title="Ver detalle" onclick='abrirDetalle(<?= json_encode([
                 "numero_inventario"=>$m["numero_inventario"],"modelo"=>$m["modelo"],"marca"=>$m["marca"],"nombre_area"=>$m["nombre_area"],
                 "tipo_mantenimiento"=>$m["tipo_mantenimiento"],"estado"=>$m["estado"],"fecha_realizacion"=>$m["fecha_realizacion"],
                 "fecha_entrega"=>$m["fecha_entrega"],"proximo_mantenimiento"=>$m["proximo_mantenimiento"],"tecnico_nombre"=>$m["tecnico_nombre"],"detalles"=>$m["detalles"]
@@ -204,6 +205,7 @@ if ($mantenimientos) {
     </tr>
     <?php endforeach; ?></tbody></table><?php endif; ?>
     </div>
+</div>
 </div>
 </main></div>
 
@@ -249,7 +251,7 @@ function abrirDetalle(m){
         <p><strong>Próx. mantenimiento:</strong> ${dias}</p>
         <p><strong>Técnico:</strong> ${m.tecnico_nombre||'—'}</p>
         <hr class="divider">
-        <p style="white-space:pre-wrap">${m.detalles ? m.detalles.replace(/</g,'&lt;') : 'Sin detalles registrados.'}</p>
+        <p style="white-space:pre-wrap;overflow-wrap:anywhere">${m.detalles ? m.detalles.replace(/</g,'&lt;') : 'Sin detalles registrados.'}</p>
     `;
     openModal('modalVerDetalle');
 }

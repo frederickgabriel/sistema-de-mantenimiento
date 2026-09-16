@@ -53,7 +53,7 @@ $tareasRealizadas = count(array_filter($tareas, fn($t) => $t['estado'] === 'Real
 $tareasPendientes = count(array_filter($tareas, fn($t) => in_array($t['estado'], ['Pendiente', 'En Proceso'])));
 $volver = '/pages/empleado_detalle.php?id=' . $id;
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title><?= e($empleado['nombre']) ?> — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=10"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title><?= e($empleado['nombre']) ?> — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=12"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header">
@@ -87,7 +87,7 @@ $volver = '/pages/empleado_detalle.php?id=' . $id;
     <?php else: ?><table><thead><tr><th>Tarea</th><th>Equipo</th><th>Prioridad</th><th>Estado</th><th>Completada</th></tr></thead><tbody>
     <?php foreach ($tareas as $t): ?>
     <tr>
-        <td><strong><?= e($t['nombre_tarea']) ?></strong></td>
+        <td><strong class="text-clip" title="<?= e($t['nombre_tarea']) ?>" style="max-width:220px"><?= e($t['nombre_tarea']) ?></strong></td>
         <td class="text-mono"><?= $t['numero_inventario'] ? e($t['numero_inventario']) : '<span class="text-muted">—</span>' ?></td>
         <td><span class="badge-estado badge-<?= strtolower($t['prioridad']) ?>"><?= e($t['prioridad']) ?></span></td>
         <td><?= badgeTarea($t['estado']) ?></td>
@@ -104,7 +104,7 @@ $volver = '/pages/empleado_detalle.php?id=' . $id;
     <?php else: ?><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th>Entrega</th><th>Fotos</th></tr></thead><tbody>
     <?php foreach ($mantenimientos as $m): $evs = $evidenciasPorMtto[$m['id_mantenimiento']] ?? []; $completado = $m['estado'] === 'Completado'; ?>
     <tr>
-        <td><span class="text-mono"><?= e($m['numero_inventario']) ?></span><br><small class="text-muted"><?= e($m['modelo']) ?> <?= e($m['marca'] ?? '') ?></small></td>
+        <td><span class="text-mono text-clip" title="<?= e($m['numero_inventario']) ?>" style="max-width:140px"><?= e($m['numero_inventario']) ?></span><br><small class="text-muted text-clip" title="<?= e($m['modelo'].' '.($m['marca'] ?? '')) ?>" style="max-width:180px"><?= e($m['modelo']) ?> <?= e($m['marca'] ?? '') ?></small></td>
         <td><?= $m['tipo_mantenimiento'] === 'Preventivo' ? '<span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">shield</span> Preventivo</span>' : '<span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">handyman</span> Correctivo</span>' ?></td>
         <td><span class="badge-estado <?= $completado?'badge-realizado':'badge-pendiente' ?>"><span class="material-symbols-outlined mi-sm"><?= $completado?'check_circle':'hourglass_empty' ?></span> <?= $completado?'Completado':'En Proceso' ?></span></td>
         <td class="text-secondary"><?= fechaES($m['fecha_realizacion']) ?></td>

@@ -58,3 +58,37 @@
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeZConfirm(); });
     });
 })();
+
+// Filtros sin recarga de página: reemplaza la navegación (location.href) de los
+// selects/links de filtro por un fetch() a la misma URL, tomando solo el contenedor
+// #ajaxFiltroZona de la respuesta y sustituyéndolo en la página actual. Si algo falla
+// (sin conexión, contenedor no encontrado, etc.) cae de vuelta a la navegación normal.
+(function () {
+    const ZONA_ID = 'ajaxFiltroZona';
+
+    function cargarZona(url, pushState) {
+        const actual = document.getElementById(ZONA_ID);
+        if (!actual) { location.href = url; return; }
+        actual.style.opacity = '0.45';
+        fetch(url)
+            .then((r) => { if (!r.ok) throw new Error('http'); return r.text(); })
+            .then((html) => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const nueva = doc.getElementById(ZONA_ID);
+                if (!nueva) throw new Error('sin zona');
+                document.getElementById(ZONA_ID).replaceWith(nueva);
+                if (doc.title) document.title = doc.title;
+                if (pushState) history.pushState({ ajaxFiltro: true }, '', url);
+            })
+            .catch(() => { location.href = url; });
+    }
+
+    window.ajaxFiltro = function (url) {
+        cargarZona(url, true);
+        return false;
+    };
+
+    window.addEventListener('popstate', () => {
+        if (document.getElementById(ZONA_ID)) cargarZona(location.href, false);
+    });
+})();

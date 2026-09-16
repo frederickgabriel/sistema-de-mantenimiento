@@ -37,6 +37,16 @@ if ($esAdm) {
 }
 ?>
 
+<script>
+(function () {
+    try {
+        var guardado = localStorage.getItem('theme');
+        var tema = guardado || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (tema === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+})();
+</script>
+
 <!-- Topbar móvil (solo visible en pantallas pequeñas) -->
 <div class="topbar" id="topbar">
     <button class="topbar-ham" id="hamBtn" onclick="sbToggle()" aria-label="Abrir menú">
@@ -93,6 +103,7 @@ if ($esAdm) {
             <?php if ($esAdm): ?>
                 <?= navLink('bajas.php',      'delete_forever',   'Bajas de Equipos', $currentPage) ?>
                 <?= navLink('empleados.php',  'groups',           'Empleados',        $currentPage) ?>
+                <?= navLink('marca.php',      'palette',          'Marca / Reportes', $currentPage) ?>
                 <li>
                     <a href="/pages/admin_roles.php" class="nav-item <?= $currentPage==='admin_roles.php' ? 'active' : '' ?>" title="Gestión de Roles">
                         <span class="material-symbols-outlined nav-icon">admin_panel_settings</span>
@@ -109,6 +120,10 @@ if ($esAdm) {
     </nav>
 
     <div class="sidebar-footer">
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Cambiar a modo claro / oscuro">
+            <span class="material-symbols-outlined" id="themeToggleIcon">dark_mode</span>
+            <span class="theme-toggle-label" id="themeToggleLabel">Modo oscuro</span>
+        </button>
         <a href="/pages/configuracion.php" class="nav-item <?= $currentPage==='configuracion.php' ? 'active' : '' ?>" style="margin-bottom:6px" title="Configuración">
             <span class="material-symbols-outlined nav-icon">settings</span>
             <span class="nav-label">Configuración</span>
@@ -158,7 +173,7 @@ if ($esAdm) {
 <script src="/js/asistente.js" defer></script>
 <?php endif; ?>
 
-<script src="/js/ui.js"></script>
+<script src="/js/ui.js?v=2"></script>
 <script>
 function sbToggle() {
     const sb  = document.getElementById('sidebar');
@@ -193,5 +208,34 @@ function sbCollapseToggle() {
         document.querySelector('.app-layout')?.classList.add('sidebar-collapsed');
         document.getElementById('sidebarHamBtn')?.classList.add('open');
     }
+})();
+
+// Modo claro / oscuro
+(function () {
+    var btn = document.getElementById('themeToggleBtn');
+    var icon = document.getElementById('themeToggleIcon');
+    var label = document.getElementById('themeToggleLabel');
+    if (!btn) return;
+
+    function aplicarEstado(tema) {
+        var esOscuro = tema === 'dark';
+        icon.textContent = esOscuro ? 'light_mode' : 'dark_mode';
+        label.textContent = esOscuro ? 'Modo claro' : 'Modo oscuro';
+        btn.title = esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+    }
+
+    var actual = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    aplicarEstado(actual);
+
+    btn.addEventListener('click', function () {
+        actual = actual === 'dark' ? 'light' : 'dark';
+        if (actual === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        try { localStorage.setItem('theme', actual); } catch (e) {}
+        aplicarEstado(actual);
+    });
 })();
 </script>

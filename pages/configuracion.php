@@ -228,7 +228,7 @@ $iniciales  = substr($iniciales, 0, 2);
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Configuración — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
     <style>
         /* ---- Layout configuración ---- */
         .config-layout {
@@ -489,7 +489,7 @@ $iniciales  = substr($iniciales, 0, 2);
             <div class="alert alert-error"><?= renderMsg($err) ?></div>
         <?php endif; ?>
 
-        <div class="config-layout">
+        <div class="config-layout" id="ajaxFiltroZona">
 
             <!-- ============================
                  NAV LATERAL DE CONFIGURACIÓN
@@ -510,23 +510,23 @@ $iniciales  = substr($iniciales, 0, 2);
                 </div>
                 <ul class="config-nav-menu">
                     <li>
-                        <a href="?tab=perfil" class="<?= $tab === 'perfil' ? 'active' : '' ?>">
+                        <a href="?tab=perfil" class="<?= $tab === 'perfil' ? 'active' : '' ?>" onclick="return ajaxFiltro(this.href)">
                             <span class="nav-icon material-symbols-outlined">person</span> Mi Perfil
                         </a>
                     </li>
                     <li>
-                        <a href="?tab=seguridad" class="<?= $tab === 'seguridad' ? 'active' : '' ?>">
+                        <a href="?tab=seguridad" class="<?= $tab === 'seguridad' ? 'active' : '' ?>" onclick="return ajaxFiltro(this.href)">
                             <span class="nav-icon material-symbols-outlined">lock</span> Seguridad
                         </a>
                     </li>
                     <li>
-                        <a href="?tab=cuenta" class="<?= $tab === 'cuenta' ? 'active' : '' ?>">
+                        <a href="?tab=cuenta" class="<?= $tab === 'cuenta' ? 'active' : '' ?>" onclick="return ajaxFiltro(this.href)">
                             <span class="nav-icon material-symbols-outlined">info</span> Info de Cuenta
                         </a>
                     </li>
                     <?php if (!esAdmin()): ?>
                     <li>
-                        <a href="?tab=rol" class="<?= $tab === 'rol' ? 'active' : '' ?>">
+                        <a href="?tab=rol" class="<?= $tab === 'rol' ? 'active' : '' ?>" onclick="return ajaxFiltro(this.href)">
                             <span class="nav-icon material-symbols-outlined">admin_panel_settings</span> Solicitar Admin
                         </a>
                     </li>
@@ -573,7 +573,7 @@ $iniciales  = substr($iniciales, 0, 2);
                                           enctype="multipart/form-data" id="formFoto">
                                         <input type="hidden" name="action" value="subir_foto">
                                         <input type="file" name="foto" id="inputFoto"
-                                               class="input-file-hidden" accept="image/*">
+                                               class="input-file-hidden" accept="image/*" onchange="handleFotoPreview(this)">
                                         <button type="button" class="btn btn-primary btn-sm"
                                                 onclick="document.getElementById('inputFoto').click()">
                                             <span class="material-symbols-outlined mi-sm">photo_camera</span> Subir Foto
@@ -971,9 +971,9 @@ $iniciales  = substr($iniciales, 0, 2);
 
 <script>
 // ---- Preview foto en tiempo real ----
-document.getElementById('inputFoto')?.addEventListener('change', function() {
-    if (!this.files || !this.files[0]) return;
-    const file   = this.files[0];
+function handleFotoPreview(input) {
+    if (!input.files || !input.files[0]) return;
+    const file   = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
         const preview = document.getElementById('previewImg');
@@ -986,7 +986,7 @@ document.getElementById('inputFoto')?.addEventListener('change', function() {
         document.getElementById('formFoto').submit();
     };
     reader.readAsDataURL(file);
-});
+}
 
 // ---- Toggle contraseña ----
 function togglePass(id, btn) {

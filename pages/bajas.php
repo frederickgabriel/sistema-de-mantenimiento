@@ -136,7 +136,7 @@ if ($verPdf) {
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
     <style>
         .baja-card {
             background: var(--bg-card);
@@ -254,8 +254,8 @@ if ($verPdf) {
             <div class="baja-card">
                 <div class="baja-card-header">
                     <div>
-                        <div class="baja-inv"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">delete_forever</span> <?= e($b['numero_inventario']) ?></div>
-                        <div class="baja-modelo"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin área') ?></div>
+                        <div class="baja-inv"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">delete_forever</span> <span class="text-clip" title="<?= e($b['numero_inventario']) ?>" style="max-width:200px"><?= e($b['numero_inventario']) ?></span></div>
+                        <div class="baja-modelo"><span class="text-clip" title="<?= e($b['modelo'].' '.($b['marca'] ?? '').' — '.($b['nombre_area'] ?? 'Sin área')) ?>" style="max-width:360px"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin área') ?></span></div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                         <!-- Badge validación -->
@@ -287,15 +287,15 @@ if ($verPdf) {
                 </div>
 
                 <div class="baja-meta">
-                    <div class="baja-meta-item"><strong>Motivo</strong><?= e($b['motivo_baja']) ?></div>
+                    <div class="baja-meta-item"><strong>Motivo</strong><span class="text-clip" title="<?= e($b['motivo_baja']) ?>"><?= e($b['motivo_baja']) ?></span></div>
                     <div class="baja-meta-item"><strong>Fecha de Baja</strong><?= fechaES($b['fecha_baja']) ?></div>
-                    <div class="baja-meta-item"><strong>Recomendación</strong><?= e($b['recomendacion']) ?></div>
-                    <div class="baja-meta-item"><strong>Técnico</strong><?= e($b['tecnico_nombre'] ?? '—') ?></div>
+                    <div class="baja-meta-item"><strong>Recomendación</strong><span class="text-clip" title="<?= e($b['recomendacion']) ?>"><?= e($b['recomendacion']) ?></span></div>
+                    <div class="baja-meta-item"><strong>Técnico</strong><span class="text-clip" title="<?= e($b['tecnico_nombre'] ?? '') ?>"><?= e($b['tecnico_nombre'] ?? '—') ?></span></div>
                     <?php if ($b['costo_reparacion_estimado']): ?>
                     <div class="baja-meta-item"><strong>Costo Reparación Est.</strong>$<?= number_format($b['costo_reparacion_estimado'],2) ?></div>
                     <?php endif; ?>
                     <?php if ($b['nombre_autoriza']): ?>
-                    <div class="baja-meta-item"><strong>Autoriza</strong><?= e($b['nombre_autoriza']) ?> — <?= e($b['cargo_autoriza']) ?></div>
+                    <div class="baja-meta-item"><strong>Autoriza</strong><span class="text-clip" title="<?= e($b['nombre_autoriza'].' — '.$b['cargo_autoriza']) ?>"><?= e($b['nombre_autoriza']) ?> — <?= e($b['cargo_autoriza']) ?></span></div>
                     <?php endif; ?>
                 </div>
 

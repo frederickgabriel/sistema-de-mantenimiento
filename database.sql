@@ -44,11 +44,13 @@ CREATE TABLE IF NOT EXISTS Equipos (
     numero_inventario VARCHAR(50)  PRIMARY KEY,
     modelo            VARCHAR(120) NOT NULL,
     marca             VARCHAR(80)  NULL,
+    numero_serie      VARCHAR(100) NULL,
     procesador        VARCHAR(100) NULL,
     ram               VARCHAR(50)  NULL,
     disco             VARCHAR(80)  NULL,
     estado            ENUM('Activo','Inactivo','En Reparacion','Baja') DEFAULT 'Activo',
     id_area           INT          NULL,
+    usuario_dueno     VARCHAR(150) NULL,
     fecha_registro    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_area) REFERENCES Areas(id_area) ON DELETE SET NULL
 );
@@ -148,11 +150,6 @@ INSERT INTO Equipos (numero_inventario, modelo, marca, estado, id_area) VALUES
 ('INV-002', 'EliteDesk 800 G6', 'HP',     'Activo',        1),
 ('INV-003', 'ThinkCentre M90q', 'Lenovo', 'En Reparacion', 2);
 
-
-ALTER TABLE SolicitudesRol
-    ADD COLUMN token       VARCHAR(64) NULL AFTER respuesta,
-    ADD COLUMN token_usado TINYINT(1) NOT NULL DEFAULT 0 AFTER token;
-
 -- =============================================
 -- MÓDULO EMPLEADOS (solo Admin) + evidencia fotográfica de equipos
 -- =============================================
@@ -191,3 +188,25 @@ ALTER TABLE Usuarios
 -- para vincularlo con la cuenta existente (por correo) o detectar cuentas creadas vía Google.
 ALTER TABLE Usuarios
     ADD COLUMN google_id VARCHAR(255) NULL UNIQUE AFTER password;
+
+-- =============================================
+-- BRANDING DE REPORTES PDF (fila única, id=1)
+-- Configurable desde el panel de administrador (pages/marca.php);
+-- todos los reportes PDF (Mantenimientos, Equipos, Bajas) la usan automáticamente.
+-- =============================================
+CREATE TABLE IF NOT EXISTS ConfiguracionMarca (
+    id                     INT PRIMARY KEY DEFAULT 1,
+    nombre_empresa         VARCHAR(150) NOT NULL DEFAULT 'Gestión de Mantenimiento',
+    logo                   VARCHAR(255) NULL,
+    color_primario         VARCHAR(7)  NOT NULL DEFAULT '#5b21b6',
+    color_secundario       VARCHAR(7)  NOT NULL DEFAULT '#004085',
+    direccion              VARCHAR(255) NULL,
+    telefono               VARCHAR(30)  NULL,
+    correo                 VARCHAR(120) NULL,
+    pie_pagina             VARCHAR(255) NULL,
+    mostrar_logo           TINYINT(1) NOT NULL DEFAULT 1,
+    mostrar_info_empresa   TINYINT(1) NOT NULL DEFAULT 1,
+    mostrar_numero_pagina  TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_actualizacion    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+INSERT IGNORE INTO ConfiguracionMarca (id) VALUES (1);

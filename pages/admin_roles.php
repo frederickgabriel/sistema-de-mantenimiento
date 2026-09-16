@@ -160,7 +160,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
     <style>
         .solicitud-card {
             background: var(--bg-card);
@@ -182,8 +182,9 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             flex-wrap: wrap;
             margin-bottom: 12px;
         }
-        .sol-nombre { font-weight: 700; font-size: 15px; color: var(--text-primary); }
-        .sol-meta   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .sol-title-col { flex: 1; min-width: 0; }
+        .sol-nombre { font-weight: 700; font-size: 15px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sol-meta   { font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sol-just   {
             background: var(--bg-main);
             border-left: 3px solid var(--border);
@@ -193,6 +194,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             color: var(--text-secondary);
             line-height: 1.6;
             margin-bottom: 12px;
+            overflow-wrap: anywhere;
         }
         .sol-respuesta {
             background: var(--bg-main);
@@ -202,6 +204,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             font-size: 13px;
             color: var(--text-secondary);
             margin-top: 8px;
+            overflow-wrap: anywhere;
         }
         .sol-respuesta.rechazada { border-color: var(--danger); }
 
@@ -230,8 +233,8 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             font-family: var(--font-mono);
         }
         .user-info-col { flex: 1; min-width: 0; }
-        .user-nombre   { font-weight: 600; font-size: 14px; color: var(--text-primary); }
-        .user-cargo    { font-size: 12px; color: var(--text-muted); }
+        .user-nombre   { font-weight: 600; font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-cargo    { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .user-actions  { display: flex; gap: 8px; flex-shrink: 0; }
     </style>
 </head>
@@ -303,9 +306,9 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                             ?>
                             <div class="solicitud-card <?= $claseCard ?>">
                                 <div class="sol-header">
-                                    <div>
-                                        <div class="sol-nombre"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">person</span> <?= e($s['nombre']) ?></div>
-                                        <div class="sol-meta"><?= e($s['cargo']) ?> · <?= e($s['correo']) ?></div>
+                                    <div class="sol-title-col">
+                                        <div class="sol-nombre" title="<?= e($s['nombre']) ?>"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">person</span> <?= e($s['nombre']) ?></div>
+                                        <div class="sol-meta" title="<?= e($s['cargo'].' · '.$s['correo']) ?>"><?= e($s['cargo']) ?> · <?= e($s['correo']) ?></div>
                                         <div class="sol-meta">Solicitado: <?= fechaES(date('Y-m-d', strtotime($s['fecha_solicitud']))) ?></div>
                                     </div>
                                     <?php
@@ -396,11 +399,11 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                         <div class="user-row" style="<?= $inactivo?'opacity:.55':'' ?>">
                             <?= avatarChip($u['foto_perfil'], $u['nombre'], 38) ?>
                             <div class="user-info-col">
-                                <div class="user-nombre">
+                                <div class="user-nombre" title="<?= e($u['nombre']) ?>">
                                     <?= e($u['nombre']) ?>
                                     <?= $u['id_usuario'] == $_SESSION['usuario']['id'] ? '<span style="font-size:11px;color:var(--text-muted)">(tú)</span>' : '' ?>
                                 </div>
-                                <div class="user-cargo"><?= e($u['cargo']) ?> · <?= e($u['correo']) ?></div>
+                                <div class="user-cargo" title="<?= e($u['cargo'].' · '.$u['correo']) ?>"><?= e($u['cargo']) ?> · <?= e($u['correo']) ?></div>
                                 <div class="user-cargo" style="margin-top:2px">
                                     <span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">build</span> <?= $u['total_mttos'] ?> mttos · <span class="material-symbols-outlined mi-xs" style="vertical-align:-2px">checklist</span> <?= $u['total_tareas'] ?> tareas
                                 </div>

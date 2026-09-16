@@ -124,7 +124,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Calendario — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
     <style>
         /* ---- Calendario ---- */
         .cal-layout {
@@ -305,15 +305,15 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
             <div class="leyenda-item"><div class="leyenda-dot" style="background:var(--purple)"></div> Entrega de equipo</div>
         </div>
 
-        <div class="cal-layout">
+        <div class="cal-layout" id="ajaxFiltroZona">
 
             <!-- CALENDARIO -->
             <div>
                 <!-- Navegación mes -->
                 <div class="cal-nav">
-                    <a href="?mes=<?= $mesAnterior ?>&anio=<?= $anioAnterior ?>" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">arrow_back</span> Anterior</a>
+                    <a href="?mes=<?= $mesAnterior ?>&anio=<?= $anioAnterior ?>" class="btn btn-ghost btn-sm" onclick="return ajaxFiltro(this.href)"><span class="material-symbols-outlined mi-sm">arrow_back</span> Anterior</a>
                     <span class="cal-title"><?= $nombresMes[$mes] ?> <?= $anio ?></span>
-                    <a href="?mes=<?= $mesSiguiente ?>&anio=<?= $anioSiguiente ?>" class="btn btn-ghost btn-sm">Siguiente <span class="material-symbols-outlined mi-sm">arrow_forward</span></a>
+                    <a href="?mes=<?= $mesSiguiente ?>&anio=<?= $anioSiguiente ?>" class="btn btn-ghost btn-sm" onclick="return ajaxFiltro(this.href)">Siguiente <span class="material-symbols-outlined mi-sm">arrow_forward</span></a>
                 </div>
 
                 <!-- Grid del calendario -->
@@ -419,6 +419,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
                 </div>
             </div>
 
+        </div>
         </div>
     </main>
 </div>

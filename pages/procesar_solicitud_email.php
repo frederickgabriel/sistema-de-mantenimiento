@@ -86,7 +86,7 @@ if (!$token || !in_array($accion, ['aprobar', 'rechazar'], true)) {
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title><?= e($titulo) ?> — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
 </head>
 <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-main)">
     <div class="card" style="max-width:460px;width:90%;padding:36px;text-align:center">

@@ -49,7 +49,7 @@ $tareasRecientes = $db->query("
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Dashboard — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=10">
+    <link rel="stylesheet" href="/css/estilos.css?v=12">
 </head>
 <body>
 <div class="app-layout">
@@ -128,11 +128,13 @@ $tareasRecientes = $db->query("
                     <?php if (empty($tareasRecientes)): ?>
                         <div class="empty-state"><span class="empty-icon material-symbols-outlined">inbox</span><p>Sin tareas.</p></div>
                     <?php else: ?>
+                    <div class="table-wrapper">
                     <table><thead><tr><th>Tarea</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
                     <?php foreach ($tareasRecientes as $t): ?>
-                    <tr><td><?= e($t['nombre_tarea']) ?><?php if ($t['modelo']): ?><br><small class="text-muted"><?= e($t['modelo']) ?></small><?php endif; ?></td><td><?= badgeTarea($t['estado']) ?></td><td class="text-secondary" style="font-size:12px"><?= fechaES($t['fecha_programada']) ?></td></tr>
+                    <tr><td><span class="text-clip" title="<?= e($t['nombre_tarea']) ?>" style="max-width:180px"><?= e($t['nombre_tarea']) ?></span><?php if ($t['modelo']): ?><br><small class="text-muted text-clip" title="<?= e($t['modelo']) ?>" style="max-width:180px"><?= e($t['modelo']) ?></small><?php endif; ?></td><td><?= badgeTarea($t['estado']) ?></td><td class="text-secondary" style="font-size:12px"><?= fechaES($t['fecha_programada']) ?></td></tr>
                     <?php endforeach; ?>
                     </tbody></table>
+                    </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -147,9 +149,9 @@ $tareasRecientes = $db->query("
                 <table><thead><tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha</th><th>Próx. Mantenimiento</th></tr></thead><tbody>
                 <?php foreach ($ultimos as $m): ?>
                 <tr>
-                    <td class="text-mono"><?= e($m['numero_inventario']) ?></td>
-                    <td><?= e($m['modelo']) ?></td>
-                    <td class="text-secondary"><?= e($m['nombre_area'] ?? '—') ?></td>
+                    <td class="text-mono"><span class="text-clip" title="<?= e($m['numero_inventario']) ?>" style="max-width:140px"><?= e($m['numero_inventario']) ?></span></td>
+                    <td><span class="text-clip" title="<?= e($m['modelo']) ?>" style="max-width:180px"><?= e($m['modelo']) ?></span></td>
+                    <td class="text-secondary"><span class="text-clip" title="<?= e($m['nombre_area'] ?? '') ?>"><?= e($m['nombre_area'] ?? '—') ?></span></td>
                     <td><?= $m['tipo_mantenimiento']==='Preventivo' ? '<span class="badge-estado badge-proceso"><span class="material-symbols-outlined mi-sm">shield</span> Preventivo</span>' : '<span class="badge-estado badge-reparacion"><span class="material-symbols-outlined mi-sm">handyman</span> Correctivo</span>' ?></td>
                     <td class="text-secondary"><?= fechaES($m['fecha_realizacion']) ?></td>
                     <td><?php
