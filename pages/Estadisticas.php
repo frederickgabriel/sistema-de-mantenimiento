@@ -7,7 +7,7 @@ $db = getDB();
 // 1. Equipos por área
 $equiposPorArea = $db->query("
     SELECT a.nombre_area, COUNT(e.numero_inventario) as total
-    FROM Areas a LEFT JOIN Equipos e ON e.id_area = a.id_area
+    FROM Areas a LEFT JOIN Equipos e ON e.id_area = a.id_area AND e.estado != 'Baja'
     GROUP BY a.id_area, a.nombre_area ORDER BY total DESC
 ")->fetchAll();
 
@@ -29,18 +29,19 @@ $topEquipos = $db->query("
            SUM(m.tipo_mantenimiento='Preventivo') as preventivos,
            SUM(m.tipo_mantenimiento='Correctivo') as correctivos
     FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario
+    WHERE e.estado != 'Baja'
     GROUP BY m.numero_inventario, e.modelo ORDER BY total DESC LIMIT 10
 ")->fetchAll();
 
 // 4. Mantenimientos por mes (últimos 12 meses)
 $porMes = $db->query("
-    SELECT DATE_FORMAT(fecha_realizacion,'%b %Y') as mes_label,
-           DATE_FORMAT(fecha_realizacion,'%Y-%m') as mes_order,
+    SELECT DATE_FORMAT(m.fecha_realizacion,'%b %Y') as mes_label,
+           DATE_FORMAT(m.fecha_realizacion,'%Y-%m') as mes_order,
            COUNT(*) as total,
-           SUM(tipo_mantenimiento='Preventivo') as preventivos,
-           SUM(tipo_mantenimiento='Correctivo') as correctivos
-    FROM Mantenimientos
-    WHERE fecha_realizacion >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+           SUM(m.tipo_mantenimiento='Preventivo') as preventivos,
+           SUM(m.tipo_mantenimiento='Correctivo') as correctivos
+    FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario
+    WHERE e.estado != 'Baja' AND m.fecha_realizacion >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
     GROUP BY mes_order, mes_label ORDER BY mes_order ASC
 ")->fetchAll();
 
@@ -54,10 +55,10 @@ try {
 
 // KPIs
 $kpi = [
-    'total'       => $db->query("SELECT COUNT(*) FROM Mantenimientos")->fetchColumn(),
-    'preventivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Preventivo'")->fetchColumn(),
-    'correctivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Correctivo'")->fetchColumn(),
-    'equipos'     => $db->query("SELECT COUNT(*) FROM Equipos")->fetchColumn(),
+    'total'       => $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja'")->fetchColumn(),
+    'preventivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND m.tipo_mantenimiento='Preventivo'")->fetchColumn(),
+    'correctivos' => $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND m.tipo_mantenimiento='Correctivo'")->fetchColumn(),
+    'equipos'     => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado != 'Baja'")->fetchColumn(),
     'activos'     => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado='Activo'")->fetchColumn(),
 ];
 try {
@@ -65,14 +66,14 @@ try {
     $masCorrectivo = $db->query("
         SELECT m.numero_inventario, e.modelo, COUNT(*) as total
         FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario
-        WHERE m.tipo_mantenimiento='Correctivo'
+        WHERE e.estado != 'Baja' AND m.tipo_mantenimiento='Correctivo'
         GROUP BY m.numero_inventario, e.modelo ORDER BY total DESC LIMIT 1
     ")->fetch();
 } catch (Exception $e) { $kpi['bajas'] = 0; $masCorrectivo = null; }
 
 $areaMasEq = $db->query("
     SELECT a.nombre_area, COUNT(e.numero_inventario) as total
-    FROM Areas a LEFT JOIN Equipos e ON e.id_area=a.id_area
+    FROM Areas a LEFT JOIN Equipos e ON e.id_area=a.id_area AND e.estado != 'Baja'
     GROUP BY a.id_area ORDER BY total DESC LIMIT 1
 ")->fetch();
 
@@ -97,7 +98,7 @@ $chartData = json_encode([
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Estadísticas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .section-sep {

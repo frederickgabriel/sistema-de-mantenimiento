@@ -48,9 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    ->execute([$inv]);
 
                 $idBaja = $db->lastInsertId();
-                flash('msg', "✅ Baja registrada correctamente.");
-                header("Location: /pages/bajas.php?ver_pdf={$idBaja}");
-                exit;
+                respond(true, "✅ Baja registrada correctamente.", "/pages/bajas.php?ver_pdf={$idBaja}", ['qs' => "ver_pdf={$idBaja}"]);
             } catch (PDOException $e) {
                 $msg = "❌ Error al registrar la baja: " . $e->getMessage();
             }
@@ -66,9 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $obs     = trim($_POST['observaciones_validacion'] ?? '');
         $db->prepare("UPDATE Bajas SET estado_validacion=?, observaciones_validacion=?, fecha_validacion=NOW() WHERE id_baja=?")
            ->execute([$estado, $obs, $id]);
-        flash('msg', "✅ Baja {$estado} correctamente.");
-        header("Location: /pages/bajas.php");
-        exit;
+        respond(true, "✅ Baja {$estado} correctamente.", '/pages/bajas.php');
     }
 
     // --- Eliminar baja y reactivar equipo ---
@@ -77,14 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $inv = trim($_POST['numero_inventario'] ?? '');
         $db->prepare("DELETE FROM Bajas WHERE id_baja=?")->execute([$id]);
         $db->prepare("UPDATE Equipos SET estado='Inactivo' WHERE numero_inventario=?")->execute([$inv]);
-        flash('msg', "🗑 Baja eliminada. Equipo reactivado como Inactivo.");
-        header("Location: /pages/bajas.php");
-        exit;
+        respond(true, "🗑 Baja eliminada. Equipo reactivado como Inactivo.", '/pages/bajas.php');
     }
 
-    flash('msg', $msg);
-    header("Location: /pages/bajas.php");
-    exit;
+    respond(!str_starts_with($msg, '❌'), $msg, '/pages/bajas.php');
 }
 
 // Leer mensajes
@@ -136,7 +128,7 @@ if ($verPdf) {
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
     <style>
         .baja-card {
             background: var(--bg-card);
@@ -207,6 +199,7 @@ if ($verPdf) {
             <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
+        <div id="ajaxFiltroZona">
         <?php if ($verPdf && $bajaDetalle): ?>
         <!-- Banner: PDF listo -->
         <div class="alert alert-success" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
@@ -313,6 +306,7 @@ if ($verPdf) {
             </div>
             <?php endforeach; ?>
         <?php endif; ?>
+        </div>
 
     </main>
 </div>

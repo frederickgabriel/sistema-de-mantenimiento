@@ -15,14 +15,14 @@ $stats = [
     'inactivos'  => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado='Inactivo'")->fetchColumn(),
     'reparacion' => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado='En Reparacion'")->fetchColumn(),
     'areas'      => $db->query("SELECT COUNT(*) FROM Areas")->fetchColumn(),
-    'mttos'      => $db->query("SELECT COUNT(*) FROM Mantenimientos")->fetchColumn(),
-    'preventivos'=> $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Preventivo'")->fetchColumn(),
-    'correctivos'=> $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE tipo_mantenimiento='Correctivo'")->fetchColumn(),
-    'tareas_p'   => $db->query("SELECT COUNT(*) FROM Tareas WHERE estado='Pendiente'")->fetchColumn(),
-    'tareas_r'   => $db->query("SELECT COUNT(*) FROM Tareas WHERE estado='Realizado'")->fetchColumn(),
+    'mttos'      => $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja'")->fetchColumn(),
+    'preventivos'=> $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND m.tipo_mantenimiento='Preventivo'")->fetchColumn(),
+    'correctivos'=> $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND m.tipo_mantenimiento='Correctivo'")->fetchColumn(),
+    'tareas_p'   => $db->query("SELECT COUNT(*) FROM Tareas t LEFT JOIN Equipos e ON e.numero_inventario=t.numero_inventario WHERE t.estado='Pendiente' AND (e.estado IS NULL OR e.estado != 'Baja')")->fetchColumn(),
+    'tareas_r'   => $db->query("SELECT COUNT(*) FROM Tareas t LEFT JOIN Equipos e ON e.numero_inventario=t.numero_inventario WHERE t.estado='Realizado' AND (e.estado IS NULL OR e.estado != 'Baja')")->fetchColumn(),
 ];
 $mesActual = date('Y-m');
-$mttosMes  = $db->query("SELECT COUNT(*) FROM Mantenimientos WHERE DATE_FORMAT(fecha_realizacion,'%Y-%m')='{$mesActual}'")->fetchColumn();
+$mttosMes  = $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND DATE_FORMAT(m.fecha_realizacion,'%Y-%m')='{$mesActual}'")->fetchColumn();
 
 $generarPDF   = isset($_GET['pdf']);
 $tipoReporte  = ($_GET['tipo'] ?? 'mantenimientos') === 'equipos' ? 'equipos' : 'mantenimientos';
@@ -76,7 +76,7 @@ $urgentes = $db->query("
     JOIN (SELECT numero_inventario, MAX(id_mantenimiento) as lid FROM Mantenimientos GROUP BY numero_inventario) lm ON e.numero_inventario = lm.numero_inventario
     JOIN Mantenimientos m ON m.id_mantenimiento = lm.lid
     LEFT JOIN Areas a ON e.id_area = a.id_area
-    WHERE m.proximo_mantenimiento <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+    WHERE e.estado != 'Baja' AND m.proximo_mantenimiento <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     ORDER BY m.proximo_mantenimiento ASC
 ")->fetchAll();
 
@@ -443,7 +443,7 @@ endif;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Reportes — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
 </head>
 <body>
 <div class="app-layout">

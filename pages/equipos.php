@@ -12,9 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // BLOQUEO: todas estas acciones son solo para Admin
     $soloAdmin = ['nueva_area', 'eliminar_area', 'nuevo_equipo', 'editar_equipo', 'eliminar_equipo'];
     if (in_array($action, $soloAdmin) && !esAdmin()) {
-        flash('msg', "❌ No tienes permisos. Solo el Administrador puede realizar esta acción.");
-        header("Location: /pages/equipos.php");
-        exit;
+        respond(false, "❌ No tienes permisos. Solo el Administrador puede realizar esta acción.", '/pages/equipos.php');
     }
 
     if ($action === 'nueva_area') {
@@ -67,9 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = "🗑 Equipo eliminado.";
     }
 
-    flash('msg', $msg ?: $err);
-    header("Location: /pages/equipos.php");
-    exit;
+    respond((bool)$msg, $msg ?: $err, '/pages/equipos.php');
 }
 
 $msg = getFlash('msg') ?? '';
@@ -103,7 +99,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Equipos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
 </head>
 <body>
 <div class="app-layout">
@@ -133,6 +129,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         </div>
         <?php endif; ?>
 
+        <div id="ajaxFiltroZona">
         <!-- ÁREAS -->
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
@@ -175,7 +172,6 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         </div>
 
         <!-- EQUIPOS -->
-        <div id="ajaxFiltroZona">
         <div class="card">
             <div class="card-header">
                 <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Inventario de Equipos</div>

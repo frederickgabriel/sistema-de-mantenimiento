@@ -169,10 +169,10 @@ if ($esAdm) {
         <button type="submit" class="chat-send" aria-label="Enviar"><span class="material-symbols-outlined">send</span></button>
     </form>
 </div>
-<script src="/js/asistente.js" defer></script>
+<script src="/js/asistente.js?v=2" defer></script>
 <?php endif; ?>
 
-<script src="/js/ui.js?v=2"></script>
+<script src="/js/ui.js?v=3"></script>
 <script>
 function sbToggle() {
     const sb  = document.getElementById('sidebar');

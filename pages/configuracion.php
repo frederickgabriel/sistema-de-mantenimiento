@@ -198,6 +198,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Redirigir para evitar reenvío de formulario
     if ($msg || $err) {
+        if (isAjax()) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => (bool)$msg, 'msg' => $msg ?: $err], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         if ($msg) flash('msg', $msg); else flash('err', $err);
         header("Location: /pages/configuracion.php?tab={$tab}");
         exit;
@@ -228,7 +233,7 @@ $iniciales  = substr($iniciales, 0, 2);
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Configuración — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
     <style>
         /* ---- Layout configuración ---- */
         .config-layout {
@@ -983,7 +988,7 @@ function handleFotoPreview(input) {
         document.getElementById('fotoActual')?.style.setProperty('display','none');
         document.getElementById('fotoActualInitials')?.style.setProperty('display','none');
         // Auto-submit
-        document.getElementById('formFoto').submit();
+        document.getElementById('formFoto').requestSubmit();
     };
     reader.readAsDataURL(file);
 }

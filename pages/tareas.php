@@ -68,8 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!puedeGestionar($esAdm,$actual,$miId)) { $msg="❌ No tienes permiso sobre esa tarea."; }
         else { $db->prepare("DELETE FROM Tareas WHERE id_tarea=?")->execute([$id]); $msg="🗑 Tarea eliminada."; }
     }
-    flash('msg', $msg);
-    header("Location: /pages/tareas.php?estado=".urlencode($_GET['estado']??'')."&empleado=".urlencode($_GET['empleado']??'')); exit;
+    respond(!str_starts_with($msg, '❌'), $msg, "/pages/tareas.php?estado=".urlencode($_GET['estado']??'')."&empleado=".urlencode($_GET['empleado']??''));
 }
 $msg = getFlash('msg') ?? '';
 $filtroEstado=$_GET['estado']??'';
@@ -84,17 +83,17 @@ $where = $conds ? "WHERE ".implode(' AND ',$conds) : '';
 $stmt=$db->prepare("SELECT t.*,e.modelo,a.nombre_area,u.nombre as asignado_nombre,u.foto_perfil as asignado_foto FROM Tareas t LEFT JOIN Equipos e ON e.numero_inventario=t.numero_inventario LEFT JOIN Areas a ON e.id_area=a.id_area LEFT JOIN Usuarios u ON u.id_usuario=t.id_usuario_asignado {$where} ORDER BY CASE t.estado WHEN 'Pendiente' THEN 1 WHEN 'En Proceso' THEN 2 WHEN 'No Realizado' THEN 3 WHEN 'Realizado' THEN 4 END, CASE t.prioridad WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 WHEN 'Baja' THEN 3 END, t.fecha_programada ASC");
 $stmt->execute($params); $tareas=$stmt->fetchAll();
 
-$condsConteo=[]; $paramsConteo=[];
-if (!$esAdm) { $condsConteo[]="id_usuario_asignado=?"; $paramsConteo[]=$miId; }
-elseif ($filtroEmpleado) { $condsConteo[]="id_usuario_asignado=?"; $paramsConteo[]=$filtroEmpleado; }
-$whereConteo = $condsConteo ? "WHERE ".implode(' AND ',$condsConteo) : '';
-$conteosStmt=$db->prepare("SELECT estado,COUNT(*) as total FROM Tareas {$whereConteo} GROUP BY estado"); $conteosStmt->execute($paramsConteo); $conteos=$conteosStmt->fetchAll();
+$condsConteo=["(e.estado IS NULL OR e.estado != 'Baja')"]; $paramsConteo=[];
+if (!$esAdm) { $condsConteo[]="t.id_usuario_asignado=?"; $paramsConteo[]=$miId; }
+elseif ($filtroEmpleado) { $condsConteo[]="t.id_usuario_asignado=?"; $paramsConteo[]=$filtroEmpleado; }
+$whereConteo = "WHERE ".implode(' AND ',$condsConteo);
+$conteosStmt=$db->prepare("SELECT t.estado,COUNT(*) as total FROM Tareas t LEFT JOIN Equipos e ON e.numero_inventario=t.numero_inventario {$whereConteo} GROUP BY t.estado"); $conteosStmt->execute($paramsConteo); $conteos=$conteosStmt->fetchAll();
 $contMap=array_column($conteos,'total','estado');
 $equipos=$db->query("SELECT numero_inventario,modelo FROM Equipos WHERE estado != 'Baja' ORDER BY numero_inventario")->fetchAll();
 $usuarios=$db->query("SELECT id_usuario,nombre,cargo FROM Usuarios ORDER BY nombre")->fetchAll();
 $estados=['Pendiente','En Proceso','Realizado','No Realizado'];
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=12"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Tareas — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=13"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">checklist</span> Tareas</div><div class="page-subtitle"><?= $esAdm ? 'Actividades pendientes y seguimiento' : 'Tus tareas asignadas' ?></div></div><div class="page-actions"><button class="btn btn-primary" onclick="openModal('modalNuevaTarea')">+ Nueva Tarea</button></div></div>
@@ -163,7 +162,7 @@ function handleEstadoChange(sel, tarea) {
         abrirCompletar(tarea.id, val, tarea.nombre);
     } else {
         sel.dataset.original = val;
-        sel.form.submit();
+        sel.form.requestSubmit();
     }
 }
 function abrirCompletar(idTarea, estado, nombreTarea) {

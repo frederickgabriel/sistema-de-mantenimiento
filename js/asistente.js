@@ -83,15 +83,31 @@
         document.getElementById('chatTypingIndicator')?.remove();
     }
 
+    // Convierte el HTML guardado de un mensaje a texto plano, para mandarle al
+    // asistente el historial de la conversación sin etiquetas.
+    function htmlATexto(html) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        return (div.textContent || '').trim();
+    }
+
     function enviarPregunta(texto) {
         texto = texto.trim();
         if (!texto) return;
+
+        // Historial previo (antes de agregar este mensaje) en texto plano, para
+        // que el asistente tenga contexto de la conversación.
+        const historialPrevio = history.slice(-10).map((m) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            text: htmlATexto(m.html),
+        }));
+
         addBubble('user', escapeHtml(texto));
         renderChips([]);
         input.value = '';
         showTyping();
 
-        const body = new URLSearchParams({ q: texto });
+        const body = new URLSearchParams({ q: texto, history: JSON.stringify(historialPrevio) });
         fetch('/actions/asistente.php', { method: 'POST', body })
             .then((r) => r.json())
             .then((data) => {

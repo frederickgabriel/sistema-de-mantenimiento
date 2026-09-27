@@ -110,8 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    flash('msg', $msg);
-    header("Location: {$destino}"); exit;
+    respond(!str_starts_with($msg, '❌'), $msg, $destino);
 }
 
 $msg = getFlash('msg') ?? '';
@@ -139,7 +138,7 @@ if ($mantenimientos) {
     foreach ($evStmt->fetchAll() as $ev) { $evidenciasPorMtto[$ev['id_origen']][] = $ev; }
 }
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=12"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Mantenimientos — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=13"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">build</span> Mantenimientos</div><div class="page-subtitle"><?= $esAdm ? 'Historial y registro de mantenimientos' : 'Tus mantenimientos registrados' ?></div></div><div class="page-actions"><button class="btn btn-primary" onclick="openModal('modalNuevoMtto')">+ Registrar Mantenimiento</button></div></div>
@@ -268,7 +267,7 @@ function abrirFotos(idMtto, inventario, fotos){
         item.className = 'evidencia-item evidencia-item-manage';
         item.innerHTML = `
             <img src="${src}" onclick="abrirLightbox('${src}')">
-            <form method="POST" onsubmit="return zConfirm(this,'¿Eliminar esta foto?','danger')">
+            <form method="POST" data-ajax-remove=".evidencia-item" onsubmit="return zConfirm(this,'¿Eliminar esta foto?','danger')">
                 <input type="hidden" name="action" value="eliminar_evidencia">
                 <input type="hidden" name="id_evidencia" value="${f.id}">
                 <button type="submit" class="evidencia-delete-btn" title="Eliminar foto"><span class="material-symbols-outlined mi-sm">close</span></button>

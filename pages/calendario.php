@@ -38,7 +38,7 @@ $evMttos = $db->prepare("
     FROM Mantenimientos m
     JOIN Equipos e ON e.numero_inventario = m.numero_inventario
     LEFT JOIN Areas a ON e.id_area = a.id_area
-    WHERE m.proximo_mantenimiento BETWEEN ? AND ?
+    WHERE e.estado != 'Baja' AND m.proximo_mantenimiento BETWEEN ? AND ?
     AND m.id_mantenimiento IN (
         SELECT MAX(id_mantenimiento) FROM Mantenimientos GROUP BY numero_inventario
     )
@@ -124,7 +124,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Calendario — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
     <style>
         /* ---- Calendario ---- */
         .cal-layout {

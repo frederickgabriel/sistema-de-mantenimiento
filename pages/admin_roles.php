@@ -114,13 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (PDOException $e) {
         $msg = '❌ Error de base de datos: ' . $e->getMessage();
-        flash('msg', $msg);
-        header("Location: /pages/admin_roles.php");
-        exit;
+        respond(false, $msg, '/pages/admin_roles.php');
     }
-    flash('msg', $msg);
-    header("Location: /pages/admin_roles.php");
-    exit;
+    respond(!str_starts_with($msg, '❌'), $msg, '/pages/admin_roles.php');
 }
 
 $msg = getFlash('msg') ?? '';
@@ -160,7 +156,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=12">
+    <link rel="stylesheet" href="/css/estilos.css?v=13">
     <style>
         .solicitud-card {
             background: var(--bg-card);
@@ -255,6 +251,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             <div class="alert <?= str_starts_with($msg,'✅') ? 'alert-success' : (str_starts_with($msg,'🚫') ? 'alert-warning' : (str_starts_with($msg,'🗑') ? 'alert-info' : 'alert-error')) ?>"><?= renderMsg($msg) ?></div>
         <?php endif; ?>
 
+        <div id="ajaxFiltroZona">
         <!-- Stats -->
         <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
             <?php
@@ -492,6 +489,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                 </div>
             </div>
 
+        </div>
         </div>
     </main>
 </div>

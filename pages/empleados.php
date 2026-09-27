@@ -15,11 +15,11 @@ $empleados = $db->query("
            (SELECT COUNT(*) FROM Mantenimientos WHERE id_tecnico = u.id_usuario) AS mantenimientos_total,
            (SELECT COUNT(*) FROM EvidenciasEquipo WHERE id_usuario = u.id_usuario) AS evidencias_total
     FROM Usuarios u
-    WHERE u.rol = 'usuario'
+    WHERE u.rol = 'usuario' AND u.activo = 1
     ORDER BY u.nombre ASC
 ")->fetchAll();
 ?>
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Empleados — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=12"></head>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png"><link rel="apple-touch-icon" href="/img/favicon/favicon-180.png"><link rel="shortcut icon" href="/img/favicon/favicon.ico"><title>Empleados — <?= SITE_NAME ?></title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"><link rel="stylesheet" href="/css/estilos.css?v=13"></head>
 <body><div class="app-layout"><?php include '../includes/sidebar.php'; ?>
 <main class="main-content">
 <div class="page-header"><div><div class="page-title"><span class="material-symbols-outlined mi-md">groups</span> Empleados</div><div class="page-subtitle">Actividad, tareas realizadas y evidencia fotográfica de equipos</div></div></div>

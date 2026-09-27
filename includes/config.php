@@ -66,6 +66,27 @@ function flash(string $key, string $msg): void {
     $_SESSION['flash'][$key] = $msg;
 }
 
+// Detecta si la petición POST actual viene del interceptor AJAX de js/ui.js
+// (envía el header X-Ajax-Request) en vez de un submit tradicional del navegador.
+function isAjax(): bool {
+    return ($_SERVER['HTTP_X_AJAX_REQUEST'] ?? '') === '1';
+}
+
+// Cierra una acción POST: en peticiones AJAX responde JSON sin redirigir
+// (para que js/ui.js refresque la zona sin recargar la página); en peticiones
+// normales (sin JS, o si el fetch falló y cayó a un submit real) conserva
+// exactamente el flujo POST-Redirect-GET de siempre.
+function respond(bool $ok, string $msg, string $location, array $extra = []): void {
+    if (isAjax()) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array_merge(['ok' => $ok, 'msg' => $msg], $extra), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    flash('msg', $msg);
+    header("Location: {$location}");
+    exit;
+}
+
 // Lee y limpia un mensaje flash guardado con flash()
 function getFlash(string $key): ?string {
     $msg = $_SESSION['flash'][$key] ?? null;
@@ -186,6 +207,16 @@ define('ADMIN_EMAIL', 'frederickaguilar317@gmail.com');
 // y pega aquí el Client ID (termina en .apps.googleusercontent.com).
 define('GOOGLE_CLIENT_ID', '622263573317-j9qv78q5jdeoebn9qcvr1g7m322evpp9.apps.googleusercontent.com');
 
+// =============================================
+// CONFIGURACIÓN DE GEMINI (Google AI Studio) — motor del Asistente Zilara
+// =============================================
+// Obtén / regenera tu API key en https://aistudio.google.com/apikey
+define('GEMINI_API_KEY', '    api aqui');
+// gemini-3.1-flash-lite: responde sin gastar tokens en "pensamiento" interno
+// (a diferencia de 3.5/3.6/3.7/3.8-flash), así que es rápido, no se queda sin
+// tokens de salida a medias, y en las pruebas no dio errores de "alta demanda".
+define('GEMINI_MODEL', 'gemini-3.1-flash-lite');
+
 // Verifica un ID token emitido por Google Identity Services y devuelve su payload
 // (correo, nombre, sub, etc.) solo si es válido para este Client ID; null si no.
 function verificarTokenGoogle(string $idToken): ?array {
@@ -236,7 +267,7 @@ function verificarTokenGoogle(string $idToken): ?array {
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_USER', 'frederickaguilar317@gmail.com');
-define('SMTP_PASS', 'bmtv qfxo jetw rdbg'); // <-- Pega aquí tu contraseña de aplicación de Gmail (16 caracteres, sin espacios)
+define('SMTP_PASS', 'vdzx lmtj pqiw jhrh'); // <-- Pega aquí tu contraseña de aplicación de Gmail (16 caracteres, sin espacios)
 define('SMTP_FROM_NAME', 'Sistema ManteTech');
 
 // Verificar si el usuario actual es admin

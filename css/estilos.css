@@ -900,6 +900,65 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
 }
 
 /* ============================================
+   DASHBOARD — tarjetas resumen, gráficos y equipo de trabajo
+   ============================================ */
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.dash-stat {
+    position: relative; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 20px 22px;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.dash-stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--stat-color, var(--accent)); }
+.dash-stat:hover { border-color: var(--stat-color, var(--accent)); transform: translateY(-3px); box-shadow: 0 10px 24px rgba(20,20,40,0.08); }
+.dash-stat-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.dash-stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.dash-stat-icon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--stat-bg, var(--accent-glow)); color: var(--stat-color, var(--accent));
+}
+.dash-stat-value { font-family: var(--font-mono); font-size: 30px; font-weight: 700; color: var(--text-primary); line-height: 1; margin-bottom: 8px; }
+.dash-stat-meta { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; }
+.dash-stat-meta a { color: inherit; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+.dash-stat-meta a:hover { color: var(--stat-color, var(--accent)); }
+
+.dash-grid-main { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; }
+
+.dash-donut-wrap { position: relative; height: 170px; margin: 4px auto 18px; max-width: 170px; }
+.dash-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.dash-donut-pct { font-family: var(--font-mono); font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.dash-donut-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; text-align: center; }
+.dash-legend { display: flex; flex-direction: column; gap: 10px; }
+.dash-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.dash-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dash-legend-item strong { margin-left: auto; color: var(--text-primary); font-family: var(--font-mono); }
+
+.team-list, .task-list { display: flex; flex-direction: column; }
+.team-row, .task-row { display: flex; align-items: center; gap: 12px; padding: 13px 22px; border-bottom: 1px solid var(--border-light); }
+.team-row:last-child, .task-row:last-child { border-bottom: none; }
+.team-info, .task-info { min-width: 0; flex: 1; }
+.team-name, .task-name { font-weight: 700; font-size: 14px; color: var(--text-primary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-name { font-weight: 600; font-size: 13px; }
+.team-task, .task-date { font-size: 12px; color: var(--text-secondary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.task-date { font-size: 11px; color: var(--text-muted); }
+.task-icon {
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+
+@media (max-width: 1024px) {
+    .dash-grid-main { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+    .dash-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .team-row, .task-row { padding: 12px 14px; }
+}
+@media (max-width: 480px) {
+    .dash-stats { grid-template-columns: 1fr; }
+    .dash-stat-value { font-size: 24px; }
+}
+
+/* ============================================
    MODAL DE CONFIRMACIÓN (reemplaza confirm() nativo)
    ============================================ */
 .zc-box { max-width: 420px; text-align: center; }
