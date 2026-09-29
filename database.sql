@@ -28,13 +28,23 @@ CREATE TABLE IF NOT EXISTS Usuarios (
 );
 
 -- =============================================
--- TABLA: Areas
+-- TABLA: Departamentos
+-- =============================================
+CREATE TABLE IF NOT EXISTS Departamentos (
+    id_departamento     INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_departamento VARCHAR(100) NOT NULL,
+    fecha_creacion      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- TABLA: Areas (cada área pertenece a un Departamento)
 -- =============================================
 CREATE TABLE IF NOT EXISTS Areas (
-    id_area       INT AUTO_INCREMENT PRIMARY KEY,
-    nombre_area   VARCHAR(100) NOT NULL,
-    ubicacion     VARCHAR(150) NULL,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_area         INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_area     VARCHAR(100) NOT NULL,
+    id_departamento INT NOT NULL,
+    fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_departamento) REFERENCES Departamentos(id_departamento) ON DELETE CASCADE
 );
 
 -- =============================================
@@ -140,10 +150,14 @@ UPDATE Usuarios SET rol='admin' WHERE id_usuario = 1;
 -- =============================================
 -- DATOS DE EJEMPLO (opcional, puedes borrarlos)
 -- =============================================
-INSERT INTO Areas (nombre_area, ubicacion) VALUES
-('Sala de Cómputo A', 'Edificio Principal - Planta Baja'),
-('Sala de Cómputo B', 'Edificio Principal - Primer Piso'),
-('Laboratorio de Diseño', 'Edificio Anexo');
+INSERT INTO Departamentos (nombre_departamento) VALUES
+('Edificio Principal'),
+('Edificio Anexo');
+
+INSERT INTO Areas (nombre_area, id_departamento) VALUES
+('Sala de Cómputo A', 1),
+('Sala de Cómputo B', 1),
+('Laboratorio de Diseño', 2);
 
 INSERT INTO Equipos (numero_inventario, modelo, marca, estado, id_area) VALUES
 ('INV-001', 'OptiPlex 7090',    'Dell',   'Activo',        1),
@@ -210,3 +224,28 @@ CREATE TABLE IF NOT EXISTS ConfiguracionMarca (
     fecha_actualizacion    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT IGNORE INTO ConfiguracionMarca (id) VALUES (1);
+
+-- =============================================
+-- MIGRACIÓN: Departamentos (agrupan Áreas)
+-- Antes cada Área tenía un campo libre "ubicacion". Ahora primero se crea un
+-- Departamento y luego las Áreas se registran dentro de él (id_departamento).
+-- Este bloque solo aplica si la instalación ya existía con la columna ubicacion.
+-- =============================================
+CREATE TABLE IF NOT EXISTS Departamentos (
+    id_departamento     INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_departamento VARCHAR(100) NOT NULL,
+    fecha_creacion      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Si la columna ubicacion todavía existe, migra cada valor distinto a un Departamento,
+-- enlaza las Áreas y luego elimina la columna. En una instalación nueva (creada ya con
+-- id_departamento) este bloque no tiene nada que hacer.
+-- INSERT INTO Departamentos (nombre_departamento)
+--     SELECT DISTINCT ubicacion FROM Areas WHERE ubicacion IS NOT NULL AND ubicacion <> '';
+-- ALTER TABLE Areas ADD COLUMN id_departamento INT NULL AFTER nombre_area;
+-- UPDATE Areas a JOIN Departamentos d ON a.ubicacion = d.nombre_departamento
+--     SET a.id_departamento = d.id_departamento;
+-- ALTER TABLE Areas MODIFY id_departamento INT NOT NULL;
+-- ALTER TABLE Areas ADD CONSTRAINT fk_area_departamento
+--     FOREIGN KEY (id_departamento) REFERENCES Departamentos(id_departamento) ON DELETE CASCADE;
+-- ALTER TABLE Areas DROP COLUMN ubicacion;

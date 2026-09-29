@@ -194,6 +194,56 @@ function guardarEvidencias(PDO $db, array $files, string $origen, int $idOrigen,
     return $errores;
 }
 
+// Borra un Equipo junto con todo lo que dependa únicamente de él: sus Tareas asignadas y las
+// evidencias fotográficas (fila + archivo en disco) de esas Tareas y de sus Mantenimientos.
+// Los Mantenimientos en sí se borran solos por el FK ON DELETE CASCADE de Equipos.
+//
+// EXCEPCIÓN: si el equipo tiene algún registro en Bajas, NO se borra nada — un dictamen de baja
+// es un documento permanente y bajas.numero_inventario referencia a Equipos con ON DELETE CASCADE,
+// así que borrar el equipo borraría también su historial de baja. Se usa desde equipos.php al
+// eliminar un Equipo, un Área (borra sus equipos) o un Departamento (borra sus áreas y equipos).
+// Devuelve true si se borró, false si se conservó por tener historial de Baja.
+function eliminarEquipoConDependencias(PDO $db, string $inv): bool {
+    $tieneBaja = $db->prepare("SELECT COUNT(*) FROM Bajas WHERE numero_inventario=?");
+    $tieneBaja->execute([$inv]);
+    if ($tieneBaja->fetchColumn() > 0) return false;
+
+    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/evidencias/';
+
+    $evs = $db->prepare("
+        SELECT ev.id_evidencia, ev.ruta_imagen FROM EvidenciasEquipo ev
+        JOIN Mantenimientos m ON ev.origen='Mantenimiento' AND ev.id_origen=m.id_mantenimiento
+        WHERE m.numero_inventario=?
+        UNION ALL
+        SELECT ev.id_evidencia, ev.ruta_imagen FROM EvidenciasEquipo ev
+        JOIN Tareas t ON ev.origen='Tarea' AND ev.id_origen=t.id_tarea
+        WHERE t.numero_inventario=?
+    ");
+    $evs->execute([$inv, $inv]);
+    foreach ($evs->fetchAll() as $ev) {
+        $ruta = $uploadDir . $ev['ruta_imagen'];
+        if (file_exists($ruta)) unlink($ruta);
+        $db->prepare("DELETE FROM EvidenciasEquipo WHERE id_evidencia=?")->execute([$ev['id_evidencia']]);
+    }
+
+    $db->prepare("DELETE FROM Tareas WHERE numero_inventario=?")->execute([$inv]);
+    $db->prepare("DELETE FROM Equipos WHERE numero_inventario=?")->execute([$inv]);
+    return true;
+}
+
+// Borra un Área junto con todos sus Equipos (vía eliminarEquipoConDependencias — conserva los que
+// tengan Baja) y finalmente el Área misma. Devuelve [equiposBorrados, equiposConservadosPorBaja].
+function eliminarAreaConDependencias(PDO $db, int $idArea): array {
+    $borrados = 0; $conservados = 0;
+    $stmt = $db->prepare("SELECT numero_inventario FROM Equipos WHERE id_area=?");
+    $stmt->execute([$idArea]);
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $inv) {
+        if (eliminarEquipoConDependencias($db, $inv)) $borrados++; else $conservados++;
+    }
+    $db->prepare("DELETE FROM Areas WHERE id_area=?")->execute([$idArea]);
+    return [$borrados, $conservados];
+}
+
 // =============================================
 // CONFIGURACIÓN DE ROLES
 // =============================================

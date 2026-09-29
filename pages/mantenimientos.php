@@ -25,15 +25,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              ?? ('/pages/mantenimientos.php?equipo='.urlencode($_GET['equipo']??'').'&tecnico='.urlencode($_GET['tecnico']??''));
 
     if ($action === 'nuevo_mantenimiento') {
-        $inv=$_POST['numero_inventario']??''; $tipo=$_POST['tipo_mantenimiento']??'Preventivo';
+        $inv=trim($_POST['numero_inventario']??''); $tipo=$_POST['tipo_mantenimiento']??'Preventivo';
         $fIni=$_POST['fecha_realizacion']??''; $fEnt=$_POST['fecha_entrega']?:null; $det=trim($_POST['detalles']??'');
-        $base=$fEnt?:$fIni; $proximo=date('Y-m-d',strtotime($base.' +6 months'));
-        $db->prepare("INSERT INTO Mantenimientos (numero_inventario,tipo_mantenimiento,fecha_realizacion,fecha_entrega,proximo_mantenimiento,detalles,id_tecnico) VALUES (?,?,?,?,?,?,?)")
-           ->execute([$inv,$tipo,$fIni,$fEnt,$proximo,$det,$miId]);
-        $idMtto = (int)$db->lastInsertId();
-        $erroresFotos = guardarEvidencias($db, $_FILES['fotos_equipo'] ?? [], 'Mantenimiento', $idMtto, $inv, $miId);
-        $msg="✅ Mantenimiento registrado. Próxima cita: ".fechaES($proximo);
-        if ($erroresFotos) $msg .= " ⚠ " . implode(' ', $erroresFotos);
+        if (!$inv || !$fIni) {
+            $msg = "❌ El equipo y la fecha de realización son obligatorios.";
+        } else {
+            $existe = $db->prepare("SELECT 1 FROM Equipos WHERE numero_inventario=?"); $existe->execute([$inv]);
+            if (!$existe->fetchColumn()) {
+                $msg = "❌ Ese número de inventario no existe.";
+            } else {
+                $base=$fEnt?:$fIni; $proximo=date('Y-m-d',strtotime($base.' +6 months'));
+                try {
+                    $db->prepare("INSERT INTO Mantenimientos (numero_inventario,tipo_mantenimiento,fecha_realizacion,fecha_entrega,proximo_mantenimiento,detalles,id_tecnico) VALUES (?,?,?,?,?,?,?)")
+                       ->execute([$inv,$tipo,$fIni,$fEnt,$proximo,$det,$miId]);
+                    $idMtto = (int)$db->lastInsertId();
+                    $erroresFotos = guardarEvidencias($db, $_FILES['fotos_equipo'] ?? [], 'Mantenimiento', $idMtto, $inv, $miId);
+                    $msg="✅ Mantenimiento registrado. Próxima cita: ".fechaES($proximo);
+                    if ($erroresFotos) $msg .= " ⚠ " . implode(' ', $erroresFotos);
+                } catch (PDOException $e) {
+                    $msg = "❌ No se pudo registrar el mantenimiento.";
+                }
+            }
+        }
 
     } elseif ($action === 'reagendar') {
         $id=(int)$_POST['id_mantenimiento'];

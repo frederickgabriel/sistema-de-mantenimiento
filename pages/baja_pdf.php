@@ -19,11 +19,12 @@ $db   = getDB();
 $stmt = $db->prepare("
     SELECT b.*,
            e.modelo, e.marca, e.numero_serie, e.procesador, e.ram, e.disco, e.numero_inventario, e.fecha_registro as fecha_registro_equipo,
-           a.nombre_area, a.ubicacion,
+           a.nombre_area, dep.nombre_departamento,
            u.nombre as tecnico_nombre, u.cargo as tecnico_cargo, u.correo as tecnico_correo
     FROM Bajas b
     JOIN Equipos e ON e.numero_inventario = b.numero_inventario
     LEFT JOIN Areas a ON e.id_area = a.id_area
+    LEFT JOIN Departamentos dep ON a.id_departamento = dep.id_departamento
     LEFT JOIN Usuarios u ON u.id_usuario = b.id_tecnico_responsable
     WHERE b.id_baja = ?
 ");
@@ -193,7 +194,7 @@ $tituloVal = match ($b['estado_validacion']) { 'Validado' => 'BAJA VALIDADA', 'R
             <tr><td class="fmt-dato-label">NO. DE INVENTARIO</td><td class="fmt-dato-valor"><?= e($b['numero_inventario']) ?></td></tr>
             <tr><td class="fmt-dato-label">NO. DE SERIE</td><td class="fmt-dato-valor"><?= e($b['numero_serie'] ?: 'Sin Serie') ?></td></tr>
             <tr><td class="fmt-dato-label">MARCA / MODELO</td><td class="fmt-dato-valor"><?= e($b['marca'] ?? '—') ?> — <?= e($b['modelo']) ?></td></tr>
-            <tr><td class="fmt-dato-label">ÁREA / SALÓN</td><td class="fmt-dato-valor"><?= e($b['nombre_area'] ?? '—') ?><?= $b['ubicacion'] ? ' — ' . e($b['ubicacion']) : '' ?></td></tr>
+            <tr><td class="fmt-dato-label">ÁREA / SALÓN</td><td class="fmt-dato-valor"><?= e($b['nombre_area'] ?? '—') ?><?= $b['nombre_departamento'] ? ' — ' . e($b['nombre_departamento']) : '' ?></td></tr>
             <tr><td class="fmt-dato-label">PROCESADOR / RAM / DISCO</td><td class="fmt-dato-valor"><?= e($b['procesador'] ?? '—') ?> · <?= e($b['ram'] ?? '—') ?> · <?= e($b['disco'] ?? '—') ?></td></tr>
             <tr><td class="fmt-dato-label">FECHA DE REGISTRO EN SISTEMA</td><td class="fmt-dato-valor"><?= fechaES($b['fecha_registro_equipo']) ?></td></tr>
             <tr><td class="fmt-dato-label">TOTAL MANTENIMIENTOS REALIZADOS</td><td class="fmt-dato-valor"><?= $totalMttos ?><?= $ultimoMtto ? ' (último: ' . fechaES($ultimoMtto['fecha_realizacion']) . ' — ' . e($ultimoMtto['tipo_mantenimiento']) . ')' : '' ?></td></tr>

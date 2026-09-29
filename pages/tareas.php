@@ -66,7 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id=(int)$_POST['id_tarea'];
         $actual=$db->prepare("SELECT id_usuario_asignado FROM Tareas WHERE id_tarea=?"); $actual->execute([$id]); $actual=$actual->fetch();
         if (!puedeGestionar($esAdm,$actual,$miId)) { $msg="❌ No tienes permiso sobre esa tarea."; }
-        else { $db->prepare("DELETE FROM Tareas WHERE id_tarea=?")->execute([$id]); $msg="🗑 Tarea eliminada."; }
+        else {
+            $evs=$db->prepare("SELECT * FROM EvidenciasEquipo WHERE origen='Tarea' AND id_origen=?"); $evs->execute([$id]); $evs=$evs->fetchAll();
+            foreach ($evs as $ev) { $ruta=$_SERVER['DOCUMENT_ROOT'].'/uploads/evidencias/'.$ev['ruta_imagen']; if (file_exists($ruta)) unlink($ruta); }
+            $db->prepare("DELETE FROM EvidenciasEquipo WHERE origen='Tarea' AND id_origen=?")->execute([$id]);
+            $db->prepare("DELETE FROM Tareas WHERE id_tarea=?")->execute([$id]);
+            $msg="🗑 Tarea eliminada.";
+        }
     }
     respond(!str_starts_with($msg, '❌'), $msg, "/pages/tareas.php?estado=".urlencode($_GET['estado']??'')."&empleado=".urlencode($_GET['empleado']??''));
 }

@@ -127,11 +127,11 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
         $ctx .= "- {$e['numero_inventario']} | {$e['modelo']} {$e['marca']} | estado: {$e['estado']} | área: " . ($e['nombre_area'] ?? 'sin área') . "\n";
     }
 
-    // --- Áreas ---
-    $areas = $db->query("SELECT a.nombre_area, a.ubicacion, (SELECT COUNT(*) FROM Equipos WHERE id_area=a.id_area AND estado!='Baja') c FROM Areas a ORDER BY a.nombre_area")->fetchAll();
-    $ctx .= "\nLISTADO COMPLETO DE ÁREAS/SALONES (" . count($areas) . " en total):\n";
+    // --- Departamentos y Áreas ---
+    $areas = $db->query("SELECT a.nombre_area, d.nombre_departamento, (SELECT COUNT(*) FROM Equipos WHERE id_area=a.id_area AND estado!='Baja') c FROM Areas a JOIN Departamentos d ON a.id_departamento=d.id_departamento ORDER BY d.nombre_departamento, a.nombre_area")->fetchAll();
+    $ctx .= "\nLISTADO COMPLETO DE DEPARTAMENTOS/ÁREAS (" . count($areas) . " áreas en total):\n";
     foreach ($areas as $a) {
-        $ctx .= "- {$a['nombre_area']}" . ($a['ubicacion'] ? " ({$a['ubicacion']})" : "") . ": {$a['c']} equipo(s) vigente(s)\n";
+        $ctx .= "- {$a['nombre_area']} (Depto. {$a['nombre_departamento']}): {$a['c']} equipo(s) vigente(s)\n";
     }
 
     // --- Mantenimientos (listado completo) ---

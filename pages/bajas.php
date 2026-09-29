@@ -106,7 +106,7 @@ $bajaDetalle = null;
 if ($verPdf) {
     $stmt = $db->prepare("
         SELECT b.*, e.modelo, e.marca, e.procesador, e.ram, e.disco, e.numero_inventario,
-               a.nombre_area, a.ubicacion, u.nombre as tecnico_nombre, u.cargo as tecnico_cargo
+               a.nombre_area, u.nombre as tecnico_nombre, u.cargo as tecnico_cargo
         FROM Bajas b
         JOIN Equipos e ON e.numero_inventario = b.numero_inventario
         LEFT JOIN Areas a ON e.id_area = a.id_area

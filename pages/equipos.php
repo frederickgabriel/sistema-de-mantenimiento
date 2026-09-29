@@ -6,29 +6,62 @@ $db  = getDB();
 $msg = '';
 $err = '';
 
+// Genera el siguiente número de inventario disponible con formato INV-XXX,
+// continuando a partir del mayor número ya usado (evita reutilizar números de equipos borrados).
+function siguienteInventario(PDO $db): string {
+    $max = 0;
+    foreach ($db->query("SELECT numero_inventario FROM Equipos WHERE numero_inventario REGEXP '^INV-[0-9]+$'") as $row) {
+        $n = (int)substr($row['numero_inventario'], 4);
+        if ($n > $max) $max = $n;
+    }
+    return 'INV-' . str_pad((string)($max + 1), 3, '0', STR_PAD_LEFT);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     // BLOQUEO: todas estas acciones son solo para Admin
-    $soloAdmin = ['nueva_area', 'eliminar_area', 'nuevo_equipo', 'editar_equipo', 'eliminar_equipo'];
+    $soloAdmin = ['nuevo_departamento', 'eliminar_departamento', 'nueva_area', 'eliminar_area', 'nuevo_equipo', 'editar_equipo', 'eliminar_equipo'];
     if (in_array($action, $soloAdmin) && !esAdmin()) {
         respond(false, "❌ No tienes permisos. Solo el Administrador puede realizar esta acción.", '/pages/equipos.php');
     }
 
-    if ($action === 'nueva_area') {
-        $nombre = trim($_POST['nombre_area'] ?? '');
-        $ubicacion = trim($_POST['ubicacion'] ?? '');
+    if ($action === 'nuevo_departamento') {
+        $nombre = trim($_POST['nombre_departamento'] ?? '');
         if ($nombre) {
-            $db->prepare("INSERT INTO Areas (nombre_area, ubicacion) VALUES (?, ?)")->execute([$nombre, $ubicacion]);
-            $msg = "✅ Área «{$nombre}» registrada.";
+            $db->prepare("INSERT INTO Departamentos (nombre_departamento) VALUES (?)")->execute([$nombre]);
+            $msg = "✅ Departamento «{$nombre}» registrado.";
         } else { $err = 'El nombre es obligatorio.'; }
 
+    } elseif ($action === 'eliminar_departamento') {
+        $idDepto = (int)$_POST['id_departamento'];
+        $db->beginTransaction();
+        $borrados = 0; $conservados = 0;
+        $stmtAr = $db->prepare("SELECT id_area FROM Areas WHERE id_departamento=?");
+        $stmtAr->execute([$idDepto]);
+        foreach ($stmtAr->fetchAll(PDO::FETCH_COLUMN) as $idArea) {
+            [$b, $c] = eliminarAreaConDependencias($db, $idArea);
+            $borrados += $b; $conservados += $c;
+        }
+        $db->prepare("DELETE FROM Departamentos WHERE id_departamento=?")->execute([$idDepto]);
+        $db->commit();
+        $msg = "🗑 Departamento eliminado, junto con sus áreas y {$borrados} equipo(s).";
+        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin área).";
+
     } elseif ($action === 'eliminar_area') {
-        $db->prepare("DELETE FROM Areas WHERE id_area=?")->execute([(int)$_POST['id_area']]);
-        $msg = '🗑 Área eliminada.';
+        [$borrados, $conservados] = eliminarAreaConDependencias($db, (int)$_POST['id_area']);
+        $msg = "🗑 Área eliminada, junto con {$borrados} equipo(s) (y sus tareas/mantenimientos).";
+        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin área).";
+
+    } elseif ($action === 'nueva_area') {
+        $nombre = trim($_POST['nombre_area'] ?? '');
+        $idDepto = (int)($_POST['id_departamento'] ?? 0);
+        if ($nombre && $idDepto) {
+            $db->prepare("INSERT INTO Areas (nombre_area, id_departamento) VALUES (?, ?)")->execute([$nombre, $idDepto]);
+            $msg = "✅ Área «{$nombre}» registrada.";
+        } else { $err = 'El nombre y el departamento son obligatorios.'; }
 
     } elseif ($action === 'nuevo_equipo') {
-        $inv    = trim($_POST['numero_inventario'] ?? '');
         $model  = trim($_POST['modelo'] ?? '');
         $marca  = trim($_POST['marca'] ?? '');
         $serie  = trim($_POST['numero_serie'] ?? '');
@@ -37,15 +70,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $disco  = trim($_POST['disco'] ?? '');
         $area   = $_POST['id_area'] ?: null;
         $dueno  = trim($_POST['usuario_dueno'] ?? '');
-        if ($inv && $model) {
-            try {
-                $db->prepare("INSERT INTO Equipos (numero_inventario,modelo,marca,numero_serie,procesador,ram,disco,id_area,usuario_dueno,estado) VALUES (?,?,?,?,?,?,?,?,?,'Activo')")
-                   ->execute([$inv, $model, $marca, $serie, $proc, $ram, $disco, $area, $dueno]);
-                $msg = "✅ Equipo «{$inv}» registrado.";
-            } catch (PDOException $e) {
-                $err = $e->getCode() == 23000 ? 'Ese número de inventario ya existe.' : 'Error al guardar el equipo.';
+        if ($model) {
+            // El número de inventario se asigna automáticamente (INV-XXX), nunca lo escribe el usuario.
+            // Reintenta unas veces por si dos guardados simultáneos generan el mismo número.
+            $guardado = false;
+            for ($intento = 0; $intento < 5 && !$guardado; $intento++) {
+                $inv = siguienteInventario($db);
+                try {
+                    $db->prepare("INSERT INTO Equipos (numero_inventario,modelo,marca,numero_serie,procesador,ram,disco,id_area,usuario_dueno,estado) VALUES (?,?,?,?,?,?,?,?,?,'Activo')")
+                       ->execute([$inv, $model, $marca, $serie, $proc, $ram, $disco, $area, $dueno]);
+                    $guardado = true;
+                    $msg = "✅ Equipo «{$inv}» registrado.";
+                } catch (PDOException $e) {
+                    if ($e->getCode() != 23000) { $err = 'Error al guardar el equipo.'; break; }
+                }
             }
-        } else { $err = 'Inventario y modelo son obligatorios.'; }
+            if (!$guardado && !$err) $err = 'No se pudo generar un número de inventario disponible. Intenta de nuevo.';
+        } else { $err = 'El modelo es obligatorio.'; }
 
     } elseif ($action === 'editar_equipo') {
         $inv = trim($_POST['numero_inventario'] ?? '');
@@ -61,8 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } elseif ($action === 'eliminar_equipo') {
         $inv = trim($_POST['numero_inventario'] ?? '');
-        $db->prepare("DELETE FROM Equipos WHERE numero_inventario=?")->execute([$inv]);
-        $msg = "🗑 Equipo eliminado.";
+        if (eliminarEquipoConDependencias($db, $inv)) {
+            $msg = "🗑 Equipo «{$inv}» eliminado (junto con sus tareas y mantenimientos).";
+        } else {
+            $err = "Ese equipo tiene historial de Baja y no se puede eliminar (el dictamen debe conservarse). Puedes reasignarlo a otra área en su lugar.";
+        }
     }
 
     respond((bool)$msg, $msg ?: $err, '/pages/equipos.php');
@@ -82,11 +126,17 @@ if ($filtroEstado && in_array($filtroEstado, $estadosValidos)) { $condsEq[] = "e
 $whereEq  = 'WHERE ' . implode(' AND ', $condsEq);
 $ordenSql = $orden === 'antiguos' ? 'ASC' : 'DESC';
 
-$areas       = $db->query("SELECT *, (SELECT COUNT(*) FROM Equipos WHERE id_area=Areas.id_area AND estado!='Baja') as total_equipos FROM Areas ORDER BY nombre_area")->fetchAll();
+$proximoInventario = siguienteInventario($db);
+
+$departamentos = $db->query("SELECT *, (SELECT COUNT(*) FROM Areas WHERE id_departamento=Departamentos.id_departamento) as total_areas FROM Departamentos ORDER BY nombre_departamento")->fetchAll();
+$areas       = $db->query("SELECT a.*, (SELECT COUNT(*) FROM Equipos WHERE id_area=a.id_area AND estado!='Baja') as total_equipos FROM Areas a ORDER BY nombre_area")->fetchAll();
 $stmtEq      = $db->prepare("SELECT e.*, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area {$whereEq} ORDER BY e.fecha_registro {$ordenSql}");
 $stmtEq->execute($paramsEq);
 $equipos     = $stmtEq->fetchAll();
-$areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombre_area")->fetchAll();
+$areasSelect = $db->query("SELECT a.id_area, a.nombre_area, a.id_departamento, d.nombre_departamento FROM Areas a JOIN Departamentos d ON a.id_departamento=d.id_departamento ORDER BY d.nombre_departamento, a.nombre_area")->fetchAll();
+
+$areasPorDepto = [];
+foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -97,7 +147,7 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
     <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
     <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
-    <title>Equipos y Áreas — <?= SITE_NAME ?></title>
+    <title>Equipos, Departamentos y Áreas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <link rel="stylesheet" href="/css/estilos.css?v=13">
 </head>
@@ -108,13 +158,14 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
 
         <div class="page-header">
             <div>
-                <div class="page-title"><span class="material-symbols-outlined mi-md">computer</span> Equipos y Áreas</div>
-                <div class="page-subtitle">Inventario y gestión de salas de cómputo</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">computer</span> Equipos, Departamentos y Áreas</div>
+                <div class="page-subtitle">Inventario y gestión de departamentos y salas de cómputo</div>
             </div>
             <?php if (esAdmin()): ?>
             <div class="page-actions">
+                <button class="btn btn-ghost"   onclick="openModal('modalNuevoDepartamento')">+ Nuevo Departamento</button>
                 <button class="btn btn-ghost"   onclick="openModal('modalNuevaArea')">+ Nueva Área</button>
-                <button class="btn btn-primary" onclick="openModal('modalNuevoEquipo')">+ Nuevo Equipo</button>
+                <button class="btn btn-primary" onclick="abrirNuevoEquipo()">+ Nuevo Equipo</button>
             </div>
             <?php endif; ?>
         </div>
@@ -130,40 +181,66 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         <?php endif; ?>
 
         <div id="ajaxFiltroZona">
-        <!-- ÁREAS -->
+        <!-- DEPARTAMENTOS / ÁREAS -->
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
-                <div class="card-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Áreas / Salones Registrados</div>
-                <span class="text-muted" style="font-size:13px"><?= count($areas) ?> áreas</span>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Departamentos / Áreas Registradas</div>
+                <span class="text-muted" style="font-size:13px"><?= count($departamentos) ?> departamentos · <?= count($areas) ?> áreas</span>
             </div>
             <div class="table-wrapper">
-                <?php if (empty($areas)): ?>
-                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">meeting_room</span><p>No hay áreas registradas.</p></div>
+                <?php if (empty($departamentos)): ?>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">meeting_room</span><p>No hay departamentos registrados.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th><th>Nombre</th><th>Ubicación</th><th>Equipos</th>
+                            <th>Nombre</th><th>Equipos</th>
                             <?php if (esAdmin()): ?><th>Acciones</th><?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($areas as $a): ?>
-                    <tr>
-                        <td class="text-muted" style="font-size:12px"><?= e($a['id_area']) ?></td>
-                        <td><strong class="text-clip" title="<?= e($a['nombre_area']) ?>" style="max-width:200px"><?= e($a['nombre_area']) ?></strong></td>
-                        <td class="text-secondary"><span class="text-clip" title="<?= e($a['ubicacion'] ?? '') ?>" style="max-width:200px"><?= e($a['ubicacion'] ?? '—') ?></span></td>
+                    <?php foreach ($departamentos as $d): ?>
+                    <?php $areasDelDepto = $areasPorDepto[$d['id_departamento']] ?? []; ?>
+                    <tr class="depto-row" style="cursor:pointer" onclick="toggleDepto(<?= $d['id_departamento'] ?>)">
+                        <td>
+                            <span class="material-symbols-outlined mi-sm depto-caret" id="caret-<?= $d['id_departamento'] ?>" style="vertical-align:-6px">chevron_right</span>
+                            <strong class="text-clip" title="<?= e($d['nombre_departamento']) ?>" style="max-width:200px"><?= e($d['nombre_departamento']) ?></strong>
+                            <span class="text-muted" style="font-size:12px"> — <?= $d['total_areas'] ?> área<?= $d['total_areas']==1?'':'s' ?></span>
+                        </td>
+                        <td><span class="badge-estado badge-proceso"><?= array_sum(array_column($areasDelDepto,'total_equipos')) ?> equipos</span></td>
+                        <?php if (esAdmin()): ?>
+                        <td onclick="event.stopPropagation()">
+                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar este departamento y todas sus áreas?','danger')">
+                                <input type="hidden" name="action" value="eliminar_departamento">
+                                <input type="hidden" name="id_departamento" value="<?= $d['id_departamento'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar departamento"><span class="material-symbols-outlined mi-sm">delete</span></button>
+                            </form>
+                        </td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php if (empty($areasDelDepto)): ?>
+                    <tr class="area-row" data-depto="<?= $d['id_departamento'] ?>" style="display:none">
+                        <td colspan="<?= esAdmin() ? 3 : 2 ?>" class="text-muted" style="font-size:13px">Sin áreas registradas todavía.</td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php foreach ($areasDelDepto as $a): ?>
+                    <tr class="area-row" data-depto="<?= $d['id_departamento'] ?>" data-area-id="<?= $a['id_area'] ?>" data-area-nombre="<?= e($a['nombre_area']) ?>" style="display:none">
+                        <td style="padding-left:36px">
+                            <span class="material-symbols-outlined mi-sm text-muted" style="vertical-align:-6px">subdirectory_arrow_right</span>
+                            <span class="text-clip" title="<?= e($a['nombre_area']) ?>" style="max-width:200px"><?= e($a['nombre_area']) ?></span>
+                        </td>
                         <td><span class="badge-estado badge-proceso"><?= $a['total_equipos'] ?> equipos</span></td>
                         <?php if (esAdmin()): ?>
                         <td>
                             <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta área?','danger')">
                                 <input type="hidden" name="action"  value="eliminar_area">
                                 <input type="hidden" name="id_area" value="<?= $a['id_area'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm btn-icon"><span class="material-symbols-outlined mi-sm">delete</span></button>
+                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar área"><span class="material-symbols-outlined mi-sm">delete</span></button>
                             </form>
                         </td>
                         <?php endif; ?>
                     </tr>
+                    <?php endforeach; ?>
                     <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -182,9 +259,12 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                     <label>Área</label>
                     <select onchange="ajaxFiltro('/pages/equipos.php?area='+this.value+'&estado=<?= urlencode($filtroEstado) ?>&orden=<?= urlencode($orden) ?>')">
                         <option value="">Todas las áreas</option>
-                        <?php foreach ($areasSelect as $a): ?>
+                        <?php $deptoActual = null; foreach ($areasSelect as $a): ?>
+                            <?php if ($deptoActual !== $a['id_departamento']): if ($deptoActual !== null) echo '</optgroup>'; ?>
+                                <optgroup label="<?= e($a['nombre_departamento']) ?>">
+                            <?php $deptoActual = $a['id_departamento']; endif; ?>
                         <option value="<?= $a['id_area'] ?>" <?= $filtroArea===(int)$a['id_area']?'selected':'' ?>><?= e($a['nombre_area']) ?></option>
-                        <?php endforeach; ?>
+                        <?php endforeach; if ($deptoActual !== null) echo '</optgroup>'; ?>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom:0;min-width:180px">
@@ -269,13 +349,14 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 <?php endif; ?>
             </div>
         </div>
-        </div>
 
-    </main>
-</div>
-
-<?php if (esAdmin()): ?>
-<!-- Modal: Nueva Área -->
+        <?php /* Los modales viven DENTRO de #ajaxFiltroZona a propósito: cada vez que se
+        guarda/elimina algo, ui.js vuelve a pedir esta zona por fetch() y la reemplaza
+        completa, así los <select> de estos formularios (ej. el de Departamento en
+        "Nueva Área") siempre traen las opciones recién creadas. Si se sacan de aquí,
+        quedan con los datos congelados del primer render de la página. */ ?>
+        <?php if (esAdmin()): ?>
+        <!-- Modal: Nueva Área -->
 <div class="modal-overlay" id="modalNuevaArea">
     <div class="modal-box">
         <div class="modal-header">
@@ -283,11 +364,39 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
             <button class="modal-close" onclick="closeModal('modalNuevaArea')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
+            <?php if (empty($departamentos)): ?>
+                <p class="text-muted">Primero debes crear un <strong>Departamento</strong>. Cierra esta ventana y usa el botón «+ Nuevo Departamento».</p>
+            <?php else: ?>
             <form method="POST" action="/pages/equipos.php">
                 <input type="hidden" name="action" value="nueva_area">
+                <div class="form-group">
+                    <label>Departamento *</label>
+                    <select name="id_departamento" required>
+                        <?php foreach ($departamentos as $d): ?>
+                        <option value="<?= $d['id_departamento'] ?>"><?= e($d['nombre_departamento']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="form-group"><label>Nombre del Área *</label><input type="text" name="nombre_area" placeholder="Ej: Sala de Cómputo A" required></div>
-                <div class="form-group"><label>Ubicación</label><input type="text" name="ubicacion" placeholder="Ej: Edificio Principal, Planta Baja"></div>
                 <button type="submit" class="btn btn-success btn-full">Guardar Área</button>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nuevo Departamento -->
+<div class="modal-overlay" id="modalNuevoDepartamento">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">apartment</span> Registrar Nuevo Departamento</div>
+            <button class="modal-close" onclick="closeModal('modalNuevoDepartamento')"><span class="material-symbols-outlined mi-sm">close</span></button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" action="/pages/equipos.php">
+                <input type="hidden" name="action" value="nuevo_departamento">
+                <div class="form-group"><label>Nombre del Departamento *</label><input type="text" name="nombre_departamento" placeholder="Ej: Sistemas" required></div>
+                <button type="submit" class="btn btn-success btn-full">Guardar Departamento</button>
             </form>
         </div>
     </div>
@@ -304,7 +413,10 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
             <form method="POST" action="/pages/equipos.php">
                 <input type="hidden" name="action" value="nuevo_equipo">
                 <div class="form-row">
-                    <div class="form-group"><label>No. Inventario *</label><input type="text" name="numero_inventario" placeholder="INV-001" required></div>
+                    <div class="form-group">
+                        <label>No. Inventario</label>
+                        <input type="text" value="<?= e($proximoInventario) ?>" disabled title="Se asigna automáticamente al guardar">
+                    </div>
                     <div class="form-group"><label>Modelo *</label><input type="text" name="modelo" placeholder="OptiPlex 7090" required></div>
                 </div>
                 <div class="form-row">
@@ -313,14 +425,20 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Área / Salón</label>
-                        <select name="id_area"><option value="">Sin asignar</option>
-                        <?php foreach ($areasSelect as $a): ?>
-                            <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
-                        <?php endforeach; ?></select>
+                        <label>Departamento</label>
+                        <select id="nuevoEqDepto" onchange="pintarAreas(this.value, 'id_area')">
+                            <option value="">Sin asignar</option>
+                            <?php foreach ($departamentos as $d): ?>
+                            <option value="<?= $d['id_departamento'] ?>"><?= e($d['nombre_departamento']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" placeholder="Nombre de quien usa el equipo (no requiere cuenta en el sistema)"></div>
+                    <div class="form-group">
+                        <label>Área</label>
+                        <select name="id_area" id="id_area"><option value="">Selecciona un departamento primero</option></select>
+                    </div>
                 </div>
+                <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" placeholder="Nombre de quien usa el equipo (no requiere cuenta en el sistema)"></div>
                 <div class="form-row">
                     <div class="form-group"><label>Procesador</label><input type="text" name="procesador" placeholder="Intel i5-10400"></div>
                     <div class="form-group"><label>RAM</label><input type="text" name="ram" placeholder="8 GB DDR4"></div>
@@ -365,14 +483,20 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
                 <div class="form-group"><label>Disco</label><input type="text" name="disco" id="editDisco"></div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Área / Salón</label>
-                        <select name="id_area" id="editArea"><option value="">Sin asignar</option>
-                        <?php foreach ($areasSelect as $a): ?>
-                            <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
-                        <?php endforeach; ?></select>
+                        <label>Departamento</label>
+                        <select id="editDepto" onchange="pintarAreas(this.value, 'editArea')">
+                            <option value="">Sin asignar</option>
+                            <?php foreach ($departamentos as $d): ?>
+                            <option value="<?= $d['id_departamento'] ?>"><?= e($d['nombre_departamento']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" id="editDueno" placeholder="Nombre de quien usa el equipo"></div>
+                    <div class="form-group">
+                        <label>Área</label>
+                        <select name="id_area" id="editArea"><option value="">Selecciona un departamento primero</option></select>
+                    </div>
                 </div>
+                <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" id="editDueno" placeholder="Nombre de quien usa el equipo"></div>
                 <button type="submit" class="btn btn-warning btn-full">Guardar Cambios</button>
             </form>
         </div>
@@ -390,13 +514,44 @@ $areasSelect = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombr
         <div class="modal-body" id="detalleEquipoBody" style="font-size:14px;line-height:1.7"></div>
     </div>
 </div>
+        </div>
+
+    </main>
+</div>
 
 <script>
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+function toggleDepto(id) {
+    const abrir = document.querySelector('.area-row[data-depto="'+id+'"]')?.style.display === 'none';
+    document.querySelectorAll('.area-row[data-depto="'+id+'"]').forEach(r => r.style.display = abrir ? '' : 'none');
+    const caret = document.getElementById('caret-'+id);
+    if (caret) caret.textContent = abrir ? 'expand_more' : 'chevron_right';
+}
+document.addEventListener('click', function(e) {
+    if (e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
 });
+// Llena el <select> de Área (selectId) con las áreas del Departamento elegido (idDepto),
+// leyéndolas de las filas .area-row de la tabla de Departamentos/Áreas (siempre al día,
+// esa tabla vive dentro de #ajaxFiltroZona y se refresca tras cada guardado por AJAX).
+function pintarAreas(idDepto, selectId, seleccionar) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '';
+    if (!idDepto) {
+        sel.appendChild(new Option('Selecciona un departamento primero', ''));
+        return;
+    }
+    sel.appendChild(new Option('Sin asignar', ''));
+    document.querySelectorAll('.area-row[data-depto="' + idDepto + '"][data-area-id]').forEach(f => {
+        sel.appendChild(new Option(f.dataset.areaNombre, f.dataset.areaId));
+    });
+    if (seleccionar) sel.value = seleccionar;
+}
+function abrirNuevoEquipo() {
+    document.getElementById('nuevoEqDepto').value = '';
+    pintarAreas('', 'id_area');
+    openModal('modalNuevoEquipo');
+}
 function abrirDetalleEquipo(eq) {
     const esc = (s) => (s || '').toString().replace(/</g,'&lt;');
     const specs = [eq.procesador, eq.ram ? eq.ram + ' RAM' : '', eq.disco].filter(Boolean).join(' · ') || '—';
@@ -421,8 +576,12 @@ function abrirEditar(eq) {
     document.getElementById('editRam').value    = eq.ram          || '';
     document.getElementById('editDisco').value  = eq.disco        || '';
     document.getElementById('editEstado').value = eq.estado       || 'Activo';
-    document.getElementById('editArea').value   = eq.id_area      || '';
     document.getElementById('editDueno').value  = eq.usuario_dueno || '';
+    const idArea  = eq.id_area || '';
+    const filaArea = idArea ? document.querySelector('.area-row[data-area-id="' + idArea + '"]') : null;
+    const idDepto  = filaArea ? filaArea.dataset.depto : '';
+    document.getElementById('editDepto').value = idDepto;
+    pintarAreas(idDepto, 'editArea', idArea);
     openModal('modalEditarEquipo');
 }
 </script>
