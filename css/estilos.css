@@ -1011,16 +1011,79 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
    ============================================ */
 .chat-fab {
     position: fixed; right: 24px; bottom: 24px; z-index: 900;
-    width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer;
-    background: linear-gradient(135deg, var(--accent-dark), var(--purple));
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 8px 24px rgba(91,33,182,0.35);
-    transition: transform 0.25s var(--ease-out), box-shadow 0.25s ease;
+    width: 52px; height: 62px; border: none; background: none; padding: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
 }
-.chat-fab:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 30px rgba(91,33,182,0.45); }
-.chat-fab .material-symbols-outlined { font-size: 26px; }
+.chat-fab:active .mascota { transform: scale(.92); }
+
+/* ---- Mascota Zilara estilo pixel-art, animada por capas ----
+   Todas las capas usan la misma imagen (img/mascota_cuerpo.png, ojos borrados) recortada con clip-path;
+   los ojos son cuadros aparte para parpadear y mirar. Proporción 208:263.
+   Movimiento "a saltos" (steps) como un sprite: reposo con parpadeo y, cada pocos segundos, js/asistente.js
+   le pone una acción: .a-mira (gira y mira de lado), .a-camina (camina), .a-salta, .a-antena, .a-estira, .a-feliz */
+.mascota {
+    --mw: 44px; --px: calc(var(--mw) * .035);
+    position: relative; display: block; width: var(--mw); aspect-ratio: 208 / 263;
+    pointer-events: none; user-select: none; transform-origin: 50% 100%;
+    filter: drop-shadow(0 6px 10px rgba(20,20,40,.28));
+    animation: mBob 2.6s steps(1, end) infinite;
+}
+.m-capa { position: absolute; inset: 0; background: url(/img/mascota_cuerpo.png) center / 100% 100% no-repeat; image-rendering: auto; }
+.m-cabeza { position: absolute; inset: 0; }
+.m-cuerpo { clip-path: inset(16.7% 0 24.3% 0); }
+.m-ant-i { clip-path: inset(0 68% 82.6% 6%); transform-origin: 19% 16.7%; animation: mAntTic 5.2s steps(1, end) infinite; }
+.m-ant-d { clip-path: inset(0 6% 82.6% 68%); transform-origin: 83% 16.7%; animation: mAntTic 6.1s steps(1, end) 1.3s infinite reverse; }
+.m-pata { clip-path: inset(74% calc(100% - (var(--i) + 1) * 12.5%) 0 calc(var(--i) * 12.5%)); transform-origin: 50% 74%; }
+.m-ojos { position: absolute; inset: 0; animation: mMirar 8s steps(1, end) infinite; }
+.m-ojo { position: absolute; top: 32.3%; width: 12.2%; height: 10%; background: #071f3f; transform-origin: 50% 50%; animation: mParpadeo 4.4s steps(1, end) infinite; }
+.m-ojo-i { left: 13%; }
+.m-ojo-d { left: 75%; }
+
+/* Reposo */
+@keyframes mBob      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--px) * -1)); } }
+@keyframes mAntTic   { 0%,86%,100% { transform: rotate(0); } 88% { transform: rotate(-9deg); } 92% { transform: rotate(7deg); } 96% { transform: rotate(-3deg); } }
+@keyframes mParpadeo { 0%,92%,100% { transform: scaleY(1); } 94% { transform: scaleY(.12); } 97% { transform: scaleY(1); } }
+@keyframes mMirar    { 0%,30%,100% { transform: translate(0,0); } 34%,44% { transform: translate(-7%,0); } 48%,70% { transform: translate(0,0); } 74%,84% { transform: translate(7%,0); } 88% { transform: translate(0,0); } }
+
+/* Acciones (una a la vez; las pone/quita js/asistente.js) */
+@keyframes mAMira {   /* mira de lado: se corre un pasito hacia donde mira y vuelve (sin aplastarse) */
+    0%,100% { transform: translateX(0); } 12%,78% { transform: translateX(calc(var(--px) * -2)); } 90% { transform: translateX(calc(var(--px) * -1)); } }
+@keyframes mAOjosLado { 0%,8% { transform: translate(0,0); } 12%,80% { transform: translate(-8%,0); } 90%,100% { transform: translate(0,0); } }
+@keyframes mACamina { /* camina de lado hacia la izquierda y regresa */
+    0% { transform: translateX(0); } 7% { transform: translateX(calc(var(--px) * -1)); } 14% { transform: translateX(calc(var(--px) * -2)); }
+    21% { transform: translateX(calc(var(--px) * -3)); } 28% { transform: translateX(calc(var(--px) * -4)); } 35% { transform: translateX(calc(var(--px) * -5)); }
+    42% { transform: translateX(calc(var(--px) * -6)); } 52% { transform: translateX(calc(var(--px) * -6)); }
+    60% { transform: translateX(calc(var(--px) * -5)); } 67% { transform: translateX(calc(var(--px) * -4)); } 74% { transform: translateX(calc(var(--px) * -3)); }
+    81% { transform: translateX(calc(var(--px) * -2)); } 88% { transform: translateX(calc(var(--px) * -1)); } 95%,100% { transform: translateX(0); } }
+@keyframes mAOjosCamina { 0%,3% { transform: translate(0,0); } 6%,46% { transform: translate(-8%,0); } 50%,54% { transform: translate(0,0); } 56%,94% { transform: translate(8%,0); } 97%,100% { transform: translate(0,0); } }
+@keyframes mPasoA { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--px) * -1.4)); } }
+@keyframes mPasoB { 0%,100% { transform: translateY(calc(var(--px) * -1.4)); } 50% { transform: translateY(0); } }
+@keyframes mASalta { 0%,100% { transform: translateY(0) scale(1,1); } 15% { transform: translateY(0) scale(1.08,.9); } 35% { transform: translateY(calc(var(--px) * -4)) scale(.96,1.06); }
+    55% { transform: translateY(calc(var(--px) * -5)) scale(.96,1.06); } 75% { transform: translateY(0) scale(1.08,.9); } 90% { transform: translateY(0) scale(1,1); } }
+@keyframes mAAntena { 0%,100% { transform: rotate(0); } 15% { transform: rotate(-22deg); } 30% { transform: rotate(14deg); } 45% { transform: rotate(-18deg); } 60% { transform: rotate(10deg); } 75% { transform: rotate(-8deg); } }
+@keyframes mAEstira { 0%,100% { transform: scale(1,1); } 20%,70% { transform: scale(.94,1.14); } 85% { transform: scale(1.06,.94); } }
+@keyframes mAFeliz  { 0%,100% { transform: translateY(0) scale(1,1); } 12% { transform: scale(1.1,.88); } 30% { transform: translateY(calc(var(--px) * -6)) scale(.94,1.1) rotate(-5deg); }
+    50% { transform: scale(1.1,.88); } 68% { transform: translateY(calc(var(--px) * -4)) rotate(5deg); } 84% { transform: scale(1.04,.96); } }
+@keyframes mAFelizOjos { 0%,100% { transform: scaleY(1); } 20%,80% { transform: scaleY(.4); } }
+
+.mascota.a-mira   { animation: mAMira 2.4s steps(1, end) 1; }
+.mascota.a-mira .m-ojos { animation: mAOjosLado 2.4s steps(1, end) 1; }
+.mascota.a-camina { animation: mACamina 3.2s steps(1, end) 1; }
+.mascota.a-camina .m-ojos { animation: mAOjosCamina 3.2s steps(1, end) 1; }
+.mascota.a-camina .m-pata:nth-child(even) { animation: mPasoA .4s steps(1, end) 8; }
+.mascota.a-camina .m-pata:nth-child(odd)  { animation: mPasoB .4s steps(1, end) 8; }
+.mascota.a-salta  { animation: mASalta 1s steps(1, end) 1; }
+.mascota.a-antena .m-ant-i, .mascota.a-antena .m-ant-d { animation: mAAntena .9s steps(1, end) 2; }
+.mascota.a-estira { animation: mAEstira 1.3s steps(1, end) 1; }
+.mascota.a-feliz  { animation: mAFeliz 1.2s steps(1, end) 1; }
+.mascota.a-feliz .m-ojo { animation: mAFelizOjos 1.2s steps(1, end) 1; }
+.chat-fab.abierto .mascota { animation: mBob 2.2s steps(1, end) infinite; }
+
+/* Versión pequeña (encabezado del chat): solo reposo */
+.mascota-mini { --mw: 27px; filter: none; }
 .chat-fab-dot {
-    position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%;
+    position: absolute; top: 42px; right: -3px; width: 12px; height: 12px; border-radius: 50%;
     background: var(--danger); border: 2px solid var(--bg-main);
     animation: chatPulse 2s ease-in-out infinite;
 }
@@ -1043,7 +1106,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
     color: #fff; padding: 16px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
 }
 .chat-avatar {
-    width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.18);
+    width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.92);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .chat-avatar .material-symbols-outlined { font-size: 21px; }

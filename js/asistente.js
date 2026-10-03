@@ -132,13 +132,49 @@
         renderChips(DEFAULT_CHIPS);
     }
 
+    // Mascota pixel-art: en reposo parpadea y mira; cada pocos segundos hace una acción distinta
+    // (gira y mira de lado, camina, salta, mueve las antenas, se estira). Las clases .a-* están en css/estilos.css
+    const mascota = fab.querySelector('.mascota');
+    const ACCIONES = [
+        { clase: 'a-mira',   ms: 2400 },
+        { clase: 'a-camina', ms: 3200 },
+        { clase: 'a-salta',  ms: 1000 },
+        { clase: 'a-antena', ms: 1800 },
+        { clase: 'a-estira', ms: 1300 },
+    ];
+    let accionActual = null, accionTimer, ultima = -1;
+    function lanzarAccion(clase, ms) {
+        if (!mascota) return;
+        clearTimeout(accionTimer);
+        if (accionActual) mascota.classList.remove(accionActual);
+        void mascota.offsetWidth; // reinicia la animación
+        accionActual = clase;
+        mascota.classList.add(clase);
+        accionTimer = setTimeout(() => { mascota.classList.remove(clase); accionActual = null; }, ms);
+    }
+    function accionAlAzar() {
+        let i;
+        do { i = Math.floor(Math.random() * ACCIONES.length); } while (i === ultima);
+        ultima = i;
+        lanzarAccion(ACCIONES[i].clase, ACCIONES[i].ms);
+    }
+    (function ciclo() {
+        setTimeout(() => {
+            if (!panel.classList.contains('open') && !document.hidden && !accionActual) accionAlAzar();
+            ciclo();
+        }, 4000 + Math.random() * 5000);
+    })();
+    fab.addEventListener('mouseenter', () => { if (!panel.classList.contains('open')) lanzarAccion('a-salta', 1000); });
+
     function openPanel() {
+        fab.classList.add('abierto');
+        lanzarAccion('a-feliz', 1200);
         panel.classList.add('open');
         fabDot?.remove();
         localStorage.setItem(SEEN_KEY, '1');
         input.focus();
     }
-    function closePanel() { panel.classList.remove('open'); }
+    function closePanel() { panel.classList.remove('open'); fab.classList.remove('abierto'); }
 
     if (localStorage.getItem(SEEN_KEY)) fabDot?.remove();
 

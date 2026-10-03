@@ -149,13 +149,26 @@ if ($esAdm) {
 
 <?php if (isset($_SESSION['usuario'])): ?>
 <!-- Asistente Zilara (motor local basado en reglas) -->
+<?php
+// Mascota por capas (antenas, cuerpo, ojos y patas) para animarla pieza por pieza — ver css/estilos.css
+if (!function_exists('mascotaZilara')) {
+    function mascotaZilara(string $extra = ''): string {
+        $patas = '';
+        for ($i = 0; $i < 8; $i++) $patas .= '<i class="m-capa m-pata" style="--i:' . $i . '"></i>';
+        return '<span class="mascota ' . $extra . '" aria-hidden="true">'
+             . '<i class="m-capa m-ant m-ant-i"></i><i class="m-capa m-ant m-ant-d"></i>'
+             . '<span class="m-cabeza"><i class="m-capa m-cuerpo"></i><span class="m-ojos"><i class="m-ojo m-ojo-i"></i><i class="m-ojo m-ojo-d"></i></span></span>'
+             . $patas . '</span>';
+    }
+}
+?>
 <button class="chat-fab" id="chatFab" aria-label="Abrir asistente" title="Asistente Zilara">
-    <span class="material-symbols-outlined">smart_toy</span>
+    <?= mascotaZilara() ?>
     <span class="chat-fab-dot" id="chatFabDot"></span>
 </button>
 <div class="chat-panel" id="chatPanel" data-user-id="<?= (int)$_SESSION['usuario']['id'] ?>">
     <div class="chat-panel-header">
-        <div class="chat-avatar"><span class="material-symbols-outlined">smart_toy</span></div>
+        <div class="chat-avatar"><?= mascotaZilara('mascota-mini') ?></div>
         <div class="chat-header-text">
             <div class="chat-header-title">Asistente Zilara</div>
             <div class="chat-header-sub">En línea</div>
@@ -169,7 +182,7 @@ if ($esAdm) {
         <button type="submit" class="chat-send" aria-label="Enviar"><span class="material-symbols-outlined">send</span></button>
     </form>
 </div>
-<script src="/js/asistente.js?v=2" defer></script>
+<script src="/js/asistente.js?v=4" defer></script>
 <?php endif; ?>
 
 <script src="/js/ui.js?v=5"></script>

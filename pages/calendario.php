@@ -124,7 +124,7 @@ $diaHoy = (date('m') == $mes && date('Y') == $anio) ? (int)date('j') : 0;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Calendario — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=18">
+    <link rel="stylesheet" href="/css/estilos.css?v=25">
     <style>
         /* ---- Calendario ---- */
         .cal-layout {
