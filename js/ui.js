@@ -108,23 +108,60 @@ const cargarZona = (function () {
 // Convive con zConfirm sin tocarlo: zConfirm bloquea el primer submit (dispara
 // preventDefault) y, al confirmar, llama form.requestSubmit(), que emite un
 // SEGUNDO evento submit ya no bloqueado — ese es el que este listener procesa.
+// Aviso flotante (toast) con el mismo estilo que las .alert del sistema.
+// Uso: zToast('Texto', 'success' | 'error' | 'info' | 'warning'). Si no se indica el
+// tipo, se deduce del emoji inicial (✅ ❌ 🗑 ⚠), igual que renderMsg() en PHP.
 (function () {
-    function mostrarToast(msg, ok) {
+    const TIPOS = {
+        success: { cls: 'alert-success', icon: 'check_circle' },
+        error:   { cls: 'alert-error',   icon: 'cancel' },
+        info:    { cls: 'alert-info',    icon: 'info' },
+        warning: { cls: 'alert-warning', icon: 'warning' },
+    };
+    const EMOJIS = { '✅': 'success', '❌': 'error', '🚫': 'error', '🗑': 'info', '⚠': 'warning' };
+
+    window.zToast = function (msg, tipo) {
         if (!msg) return;
+        for (const emoji in EMOJIS) {
+            if (msg.startsWith(emoji)) {
+                tipo = tipo || EMOJIS[emoji];
+                msg = msg.slice(emoji.length).replace(/^️/, '').trim();
+                break;
+            }
+        }
+        const t = TIPOS[tipo] || TIPOS.info;
+
         let zona = document.getElementById('ajaxToastZona');
         if (!zona) {
             zona = document.createElement('div');
             zona.id = 'ajaxToastZona';
-            zona.style.cssText = 'position:fixed;top:16px;right:16px;left:16px;z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none';
+            zona.className = 'z-toast-zona';
+            zona.setAttribute('aria-live', 'polite');
             document.body.appendChild(zona);
         }
-        const cls = msg.startsWith('✅') ? 'alert-success' : (msg.startsWith('🗑') ? 'alert-info' : (ok ? 'alert-success' : 'alert-error'));
         const el = document.createElement('div');
-        el.className = 'alert ' + cls;
-        el.style.cssText = 'max-width:420px;box-shadow:0 10px 24px rgba(20,20,40,.15);pointer-events:auto;margin:0';
-        el.textContent = msg;
+        el.className = 'alert z-toast ' + t.cls;
+        el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+        el.innerHTML = '<span class="material-symbols-outlined mi-sm"></span><span class="z-toast-msg"></span>';
+        el.firstChild.textContent = t.icon;
+        el.lastChild.textContent = msg;
         zona.appendChild(el);
-        setTimeout(() => el.remove(), 4500);
+
+        const cerrar = () => {
+            el.classList.add('saliendo');
+            el.addEventListener('animationend', () => el.remove(), { once: true });
+            setTimeout(() => el.remove(), 400); // por si no hay animación (reduced-motion)
+        };
+        el.addEventListener('click', cerrar);
+        setTimeout(cerrar, 4500);
+    };
+})();
+
+(function () {
+    function mostrarToast(msg, ok) {
+        if (!msg) return;
+        const tieneEmoji = /^(✅|❌|🚫|🗑|⚠)/.test(msg);
+        window.zToast(msg, tieneEmoji ? undefined : (ok ? 'success' : 'error'));
     }
 
     function cerrarModales() {
@@ -160,5 +197,103 @@ const cargarZona = (function () {
                 mostrarToast(data.msg, data.ok);
             })
             .catch(() => { form.submit(); });
+    });
+})();
+
+// Vista previa de documentos imprimibles (formatos, reportes, dictámenes) dentro de la
+// página, en un modal con iframe — sin abrir ventanas nuevas. El modal se crea la primera vez.
+// Uso: <a href="/pages/doc.php" data-vista="Título" data-excel="/pages/doc_excel.php">
+//      o zVista('/pages/doc.php', 'Título', '/pages/doc_excel.php')  (excel es opcional)
+// Si el documento redirige (p.ej. no se pudo generar), se cierra y se muestra su aviso en un toast.
+(function () {
+    let modal, frame, cuerpo, titulo, btnExcel, btnImprimir;
+
+    function crear() {
+        modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'zVista';
+        modal.innerHTML =
+            '<div class="modal-box z-vista-box" role="dialog" aria-modal="true" aria-labelledby="zVistaTitulo">' +
+                '<div class="modal-header z-vista-header">' +
+                    '<div class="modal-title"><span class="material-symbols-outlined mi-md">print</span> <span id="zVistaTitulo">Vista previa</span></div>' +
+                    '<div class="z-vista-acciones">' +
+                        '<a href="#" class="btn btn-success btn-sm" id="zVistaExcel" data-descarga><span class="material-symbols-outlined mi-sm">download</span><span class="z-vista-txt"> Descargar Excel</span></a>' +
+                        '<button type="button" class="btn btn-primary btn-sm" id="zVistaImprimir"><span class="material-symbols-outlined mi-sm">print</span><span class="z-vista-txt"> Imprimir / PDF</span></button>' +
+                        '<button type="button" class="modal-close" id="zVistaCerrar" aria-label="Cerrar vista previa"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="z-vista-cuerpo">' +
+                    '<div class="z-vista-cargando"><div class="z-vista-spinner"></div>Cargando documento…</div>' +
+                    '<iframe title="Vista previa del documento"></iframe>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(modal);
+
+        frame       = modal.querySelector('iframe');
+        cuerpo      = modal.querySelector('.z-vista-cuerpo');
+        titulo      = modal.querySelector('#zVistaTitulo');
+        btnExcel    = modal.querySelector('#zVistaExcel');
+        btnImprimir = modal.querySelector('#zVistaImprimir');
+
+        modal.querySelector('#zVistaCerrar').addEventListener('click', cerrar);
+        modal.addEventListener('click', (e) => { if (e.target === modal) cerrar(); });
+        btnImprimir.addEventListener('click', () => { frame.contentWindow.focus(); frame.contentWindow.print(); });
+        frame.addEventListener('load', alCargar);
+    }
+
+    function alCargar() {
+        if (!frame.dataset.url) return; // about:blank al cerrar
+        let doc = null;
+        try { doc = frame.contentDocument; } catch (err) { /* otro origen */ }
+
+        const esperado = new URL(frame.dataset.url, location.href).pathname;
+        if (doc && doc.location.pathname !== esperado) {
+            const aviso = doc.querySelector('.alert');
+            cerrar();
+            window.zToast(aviso ? aviso.textContent.trim() : 'No se pudo generar el documento.', 'error');
+            return;
+        }
+        if (doc && doc.head) {
+            // La barra "Imprimir / Volver" del documento sobra: esas acciones están en el encabezado del modal
+            doc.head.insertAdjacentHTML('beforeend', '<style>.no-print{display:none!important}</style>');
+        }
+        cuerpo.classList.add('cargado');
+        btnImprimir.disabled = false;
+    }
+
+    function cerrar() {
+        if (!modal) return;
+        modal.classList.remove('open');
+        delete frame.dataset.url;
+        setTimeout(() => { if (!frame.dataset.url) frame.src = 'about:blank'; }, 250);
+    }
+
+    window.zVista = function (url, tit, excelUrl) {
+        if (!modal) crear();
+        titulo.textContent = tit || 'Vista previa';
+        btnExcel.style.display = excelUrl ? '' : 'none';
+        btnExcel.href = excelUrl || '#';
+        btnImprimir.disabled = true;
+        cuerpo.classList.remove('cargado');
+        frame.dataset.url = url;
+        frame.src = url;
+        requestAnimationFrame(() => modal.classList.add('open'));
+        modal.querySelector('#zVistaCerrar').focus();
+    };
+    window.zVistaCerrar = cerrar;
+
+    document.addEventListener('click', (e) => {
+        const enlace = e.target.closest('a[data-vista]');
+        if (enlace) {
+            e.preventDefault();
+            window.zVista(enlace.getAttribute('href'), enlace.dataset.vista, enlace.dataset.excel);
+            return;
+        }
+        // Enlaces de descarga directa (adjuntos): avisan que empezó la descarga
+        if (e.target.closest('a[data-descarga]')) window.zToast('Descargando el archivo…', 'success');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && modal.classList.contains('open')) cerrar();
     });
 })();

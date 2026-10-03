@@ -172,7 +172,7 @@ if ($esAdm) {
 <script src="/js/asistente.js?v=2" defer></script>
 <?php endif; ?>
 
-<script src="/js/ui.js?v=3"></script>
+<script src="/js/ui.js?v=5"></script>
 <script>
 function sbToggle() {
     const sb  = document.getElementById('sidebar');

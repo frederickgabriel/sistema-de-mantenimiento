@@ -18,15 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- Registrar Baja ---
     if ($action === 'registrar_baja') {
         $inv            = trim($_POST['numero_inventario'] ?? '');
-        $motivo         = $_POST['motivo_baja'] ?? '';
+        $motivo         = mb_substr(trim($_POST['motivo_baja'] ?? ''), 0, 255);
         $desc_falla     = trim($_POST['descripcion_falla'] ?? '');
         $diagnostico    = trim($_POST['diagnostico_tecnico'] ?? '');
-        $intentos       = trim($_POST['intentos_reparacion'] ?? '');
         $costo_rep      = $_POST['costo_reparacion_estimado'] ?: null;
         $valor_actual   = $_POST['valor_actual_estimado'] ?: null;
-        $recomendacion  = $_POST['recomendacion'] ?? 'Destrucción';
-        $nombre_autoriza= trim($_POST['nombre_autoriza'] ?? '');
-        $cargo_autoriza = trim($_POST['cargo_autoriza'] ?? '');
         $fecha_baja     = $_POST['fecha_baja'] ?? date('Y-m-d');
 
         if ($inv && $motivo && $desc_falla && $diagnostico) {
@@ -34,13 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Insertar baja
                 $db->prepare("
                     INSERT INTO Bajas (numero_inventario, motivo_baja, descripcion_falla, diagnostico_tecnico,
-                        intentos_reparacion, costo_reparacion_estimado, valor_actual_estimado, recomendacion,
-                        id_tecnico_responsable, nombre_autoriza, cargo_autoriza, fecha_baja)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                        costo_reparacion_estimado, valor_actual_estimado,
+                        id_tecnico_responsable, fecha_baja)
+                    VALUES (?,?,?,?,?,?,?,?)
                 ")->execute([
                     $inv, $motivo, $desc_falla, $diagnostico,
-                    $intentos ?: null, $costo_rep, $valor_actual, $recomendacion,
-                    $_SESSION['usuario']['id'], $nombre_autoriza, $cargo_autoriza, $fecha_baja
+                    $costo_rep, $valor_actual,
+                    $_SESSION['usuario']['id'], $fecha_baja
                 ]);
 
                 // Cambiar estado del equipo a 'Baja'
@@ -101,6 +97,9 @@ $equiposActivos = $db->query("
     ORDER BY numero_inventario
 ")->fetchAll();
 
+// Departamentos registrados (campo DEPTO del formato de baja)
+$departamentos = $db->query("SELECT nombre_departamento FROM Departamentos ORDER BY nombre_departamento")->fetchAll(PDO::FETCH_COLUMN);
+
 // ¿Ver baja específica para PDF?
 $bajaDetalle = null;
 if ($verPdf) {
@@ -128,7 +127,7 @@ if ($verPdf) {
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Bajas de Equipos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=13">
+    <link rel="stylesheet" href="/css/estilos.css?v=18">
     <style>
         .baja-card {
             background: var(--bg-card);
@@ -174,6 +173,24 @@ if ($verPdf) {
         .badge-validado   { background: rgba(63,185,80,.15); color: var(--success); border: 1px solid rgba(63,185,80,.3); }
         .badge-rechazado  { background: rgba(248,81,73,.15);  color: var(--danger);  border: 1px solid rgba(248,81,73,.3); }
         .badge-pendiente-val { background: rgba(210,153,34,.15); color: var(--warning); border: 1px solid rgba(210,153,34,.3); }
+
+        /* ---- Selección de bajas para el formato ---- */
+        .sel-baja, #selTodasBajas { accent-color: var(--accent); }
+        .baja-card { transition: border-color .2s, box-shadow .2s var(--ease-out); }
+        .baja-card.seleccionada { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+        .sel-bar {
+            position: fixed; left: 50%; bottom: 24px; z-index: 900;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            box-shadow: 0 12px 32px rgba(20,20,40,.18); padding: 10px 12px 10px 18px;
+            max-width: calc(100vw - 32px);
+            transform: translate(-50%, calc(100% + 40px)); opacity: 0; pointer-events: none;
+            transition: transform .3s var(--ease-out), opacity .2s ease;
+        }
+        .sel-bar.visible { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+        .sel-bar-texto { font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+        .sel-bar-texto strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
     </style>
 </head>
 <body>
@@ -189,7 +206,7 @@ if ($verPdf) {
             </div>
             <div class="page-actions">
                 <?php if (!empty($bajas)): ?>
-                <a href="/pages/bajas_reporte_pdf.php" target="_blank" class="btn btn-ghost"><span class="material-symbols-outlined mi-sm">description</span> Reporte General PDF</a>
+                <button class="btn btn-primary" onclick="abrirFormato()"><span class="material-symbols-outlined mi-sm">table_view</span> Formato de Baja</button>
                 <?php endif; ?>
                 <button class="btn btn-danger" onclick="openModal('modalNuevaBaja')">+ Dar de Baja Equipo</button>
             </div>
@@ -203,8 +220,11 @@ if ($verPdf) {
         <?php if ($verPdf && $bajaDetalle): ?>
         <!-- Banner: PDF listo -->
         <div class="alert alert-success" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-            <span><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">description</span> Baja registrada. El dictamen PDF está listo para descargar.</span>
-            <a href="/pages/baja_pdf.php?pdf=<?= $verPdf ?>" target="_blank" class="btn btn-success btn-sm"><span class="material-symbols-outlined mi-sm">download</span> Descargar Dictamen PDF</a>
+            <span><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">description</span> Baja registrada. El formato de baja está listo.</span>
+            <span style="display:flex;gap:8px;flex-wrap:wrap">
+                <a href="/pages/formato_baja.php?ids[]=<?= $verPdf ?>&fecha=<?= e($bajaDetalle['fecha_baja']) ?>" class="btn btn-success btn-sm" data-vista="Formato de Baja" data-excel="/pages/formato_baja_excel.php?ids[]=<?= $verPdf ?>&fecha=<?= e($bajaDetalle['fecha_baja']) ?>"><span class="material-symbols-outlined mi-sm">print</span> Ver / Imprimir Formato</a>
+                <a href="/pages/formato_baja_excel.php?ids[]=<?= $verPdf ?>&fecha=<?= e($bajaDetalle['fecha_baja']) ?>" data-descarga class="btn btn-success btn-sm"><span class="material-symbols-outlined mi-sm">download</span> Descargar Excel</a>
+            </span>
         </div>
         <?php endif; ?>
 
@@ -243,12 +263,18 @@ if ($verPdf) {
                 </div>
             </div>
         <?php else: ?>
+            <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:12px;cursor:pointer">
+                <input type="checkbox" id="selTodasBajas"> Seleccionar todas para el formato de baja
+            </label>
             <?php foreach ($bajas as $b): ?>
             <div class="baja-card">
                 <div class="baja-card-header">
-                    <div>
+                    <div style="display:flex;gap:12px;align-items:flex-start">
+                        <input type="checkbox" class="sel-baja" value="<?= $b['id_baja'] ?>" title="Incluir en el formato de baja" style="margin-top:4px;width:16px;height:16px;cursor:pointer">
+                        <div>
                         <div class="baja-inv"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">delete_forever</span> <span class="text-clip" title="<?= e($b['numero_inventario']) ?>" style="max-width:200px"><?= e($b['numero_inventario']) ?></span></div>
                         <div class="baja-modelo"><span class="text-clip" title="<?= e($b['modelo'].' '.($b['marca'] ?? '').' — '.($b['nombre_area'] ?? 'Sin área')) ?>" style="max-width:360px"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin área') ?></span></div>
+                        </div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                         <!-- Badge validación -->
@@ -265,7 +291,7 @@ if ($verPdf) {
                         };
                         ?>
                         <span class="badge-estado <?= $vClass ?>"><span class="material-symbols-outlined mi-sm"><?= $vIcon ?></span> <?= e($b['estado_validacion']) ?></span>
-                        <a href="/pages/baja_pdf.php?pdf=<?= $b['id_baja'] ?>" target="_blank" class="btn btn-ghost btn-sm"><span class="material-symbols-outlined mi-sm">description</span> PDF</a>
+                        <a href="/pages/formato_baja.php?ids[]=<?= $b['id_baja'] ?>&fecha=<?= e($b['fecha_baja']) ?>" class="btn btn-ghost btn-sm" title="Formato de baja (imprimir / PDF)" data-vista="Formato de Baja — <?= e($b['numero_inventario']) ?>" data-excel="/pages/formato_baja_excel.php?ids[]=<?= $b['id_baja'] ?>&fecha=<?= e($b['fecha_baja']) ?>"><span class="material-symbols-outlined mi-sm">print</span> Formato</a>
                         <?php if ($b['estado_validacion'] === 'Pendiente'): ?>
                         <button class="btn btn-success btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Validado')"><span class="material-symbols-outlined mi-sm">check_circle</span> Validar</button>
                         <button class="btn btn-danger btn-sm" onclick="abrirValidar(<?= $b['id_baja'] ?>, 'Rechazado')"><span class="material-symbols-outlined mi-sm">cancel</span> Rechazar</button>
@@ -282,13 +308,9 @@ if ($verPdf) {
                 <div class="baja-meta">
                     <div class="baja-meta-item"><strong>Motivo</strong><span class="text-clip" title="<?= e($b['motivo_baja']) ?>"><?= e($b['motivo_baja']) ?></span></div>
                     <div class="baja-meta-item"><strong>Fecha de Baja</strong><?= fechaES($b['fecha_baja']) ?></div>
-                    <div class="baja-meta-item"><strong>Recomendación</strong><span class="text-clip" title="<?= e($b['recomendacion']) ?>"><?= e($b['recomendacion']) ?></span></div>
                     <div class="baja-meta-item"><strong>Técnico</strong><span class="text-clip" title="<?= e($b['tecnico_nombre'] ?? '') ?>"><?= e($b['tecnico_nombre'] ?? '—') ?></span></div>
                     <?php if ($b['costo_reparacion_estimado']): ?>
                     <div class="baja-meta-item"><strong>Costo Reparación Est.</strong>$<?= number_format($b['costo_reparacion_estimado'],2) ?></div>
-                    <?php endif; ?>
-                    <?php if ($b['nombre_autoriza']): ?>
-                    <div class="baja-meta-item"><strong>Autoriza</strong><span class="text-clip" title="<?= e($b['nombre_autoriza'].' — '.$b['cargo_autoriza']) ?>"><?= e($b['nombre_autoriza']) ?> — <?= e($b['cargo_autoriza']) ?></span></div>
                     <?php endif; ?>
                 </div>
 
@@ -319,7 +341,7 @@ if ($verPdf) {
             <button class="modal-close" onclick="closeModal('modalNuevaBaja')"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>
         </div>
         <div class="modal-body">
-            <div class="alert alert-warning"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">warning</span> Esta acción cambiará el estado del equipo a <strong>Baja</strong> y generará un dictamen PDF oficial.</div>
+            <div class="alert alert-warning"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">warning</span> Esta acción cambiará el estado del equipo a <strong>Baja</strong> y generará el formato de baja (imprimible y Excel).</div>
             <form method="POST" action="/pages/bajas.php">
                 <input type="hidden" name="action" value="registrar_baja">
 
@@ -342,28 +364,9 @@ if ($verPdf) {
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Motivo de Baja *</label>
-                        <select name="motivo_baja" required>
-                            <option value="">Selecciona motivo...</option>
-                            <option value="Daño Irreparable">Daño Irreparable</option>
-                            <option value="Obsolescencia">Obsolescencia Tecnológica</option>
-                            <option value="Robo/Extravío">Robo / Extravío</option>
-                            <option value="Siniestro">Siniestro (incendio, inundación, etc.)</option>
-                            <option value="Vida Útil Cumplida">Vida Útil Cumplida</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Recomendación Final</label>
-                        <select name="recomendacion">
-                            <option value="Destrucción">Destrucción</option>
-                            <option value="Donación">Donación</option>
-                            <option value="Subasta">Subasta</option>
-                            <option value="Reciclaje">Reciclaje</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Motivo de Baja *</label>
+                    <input type="text" name="motivo_baja" maxlength="255" required placeholder="Escribe el motivo de la baja (ej. daño irreparable, obsolescencia, robo...)">
                 </div>
 
                 <div class="form-group">
@@ -376,41 +379,94 @@ if ($verPdf) {
                     <textarea name="diagnostico_tecnico" rows="3" required placeholder="Diagnóstico técnico detallado. Explica por qué no es viable reparar o continuar usando el equipo..."></textarea>
                 </div>
 
-                <div class="form-group">
-                    <label>Intentos de reparación previos</label>
-                    <textarea name="intentos_reparacion" rows="2" placeholder="Describe los intentos de reparación que se realizaron anteriormente (si aplica)..."></textarea>
-                </div>
-
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Costo estimado de reparación ($)</label>
+                        <label>Costo de reparación ($)</label>
                         <input type="number" name="costo_reparacion_estimado" step="0.01" min="0" placeholder="0.00">
                     </div>
                     <div class="form-group">
-                        <label>Valor actual estimado del equipo ($)</label>
+                        <label>Costo unitario ($)</label>
                         <input type="number" name="valor_actual_estimado" step="0.01" min="0" placeholder="0.00">
                     </div>
                 </div>
 
-                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin:16px 0 10px">Validación Institucional</p>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Nombre de quien autoriza</label>
-                        <input type="text" name="nombre_autoriza" placeholder="Ej: Lic. Juan Pérez">
-                    </div>
-                    <div class="form-group">
-                        <label>Cargo</label>
-                        <input type="text" name="cargo_autoriza" placeholder="Ej: Director de Tecnología">
-                    </div>
-                </div>
-
                 <button type="submit" class="btn btn-danger btn-full" style="margin-top:8px">
-                    <span class="material-symbols-outlined mi-sm">delete_forever</span> Registrar Baja y Generar Dictamen
+                    <span class="material-symbols-outlined mi-sm">delete_forever</span> Registrar Baja y Generar Formato
                 </button>
             </form>
         </div>
     </div>
+</div>
+
+<!-- Modal: Generar Formato de Baja -->
+<div class="modal-overlay" id="modalFormato">
+    <div class="modal-box" style="max-width:520px">
+        <div class="modal-header">
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">table_view</span> Formato de Baja</div>
+            <button class="modal-close" onclick="closeModal('modalFormato')"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>
+        </div>
+        <div class="modal-body">
+            <form method="GET" action="/pages/formato_baja.php" id="formFormato">
+                <div id="formatoIds"></div>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px"><strong id="formatoConteo">0</strong> equipo(s) seleccionado(s).</p>
+
+                <div class="form-group">
+                    <label>Tipo de baja</label>
+                    <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:14px">
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:400;text-transform:none;letter-spacing:0;margin:0;color:var(--text-primary);cursor:pointer"><input type="radio" name="tipo" value="activos" checked style="width:auto;padding:0;margin:0"> Baja de activos</label>
+                        <label style="display:flex;gap:8px;align-items:center;font-weight:400;text-transform:none;letter-spacing:0;margin:0;color:var(--text-primary);cursor:pointer"><input type="radio" name="tipo" value="operacion" style="width:auto;padding:0;margin:0"> Baja de equipo operación</label>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" name="fecha" value="<?= date('Y-m-d') ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha verificación de bajas</label>
+                        <input type="date" name="fecha_verificacion">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Depto</label>
+                        <?php if ($departamentos): ?>
+                        <select name="depto" required>
+                            <?php foreach ($departamentos as $dep): ?>
+                                <option value="<?= e($dep) ?>" <?= mb_strtoupper($dep) === 'SISTEMAS' ? 'selected' : '' ?>><?= e($dep) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php else: ?>
+                        <input type="text" name="depto" value="SISTEMAS">
+                        <?php endif; ?>
+                    </div>
+                    <div class="form-group">
+                        <label>Ubicación</label>
+                        <input type="text" name="ubicacion" value="STAFF">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Observaciones adicionales</label>
+                    <input type="text" name="observaciones" maxlength="150" placeholder="Opcional">
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+                    <button type="submit" class="btn btn-primary" style="flex:1"><span class="material-symbols-outlined mi-sm">print</span> Ver / Imprimir</button>
+                    <button type="submit" class="btn btn-success" style="flex:1" formaction="/pages/formato_baja_excel.php" formtarget="_self"><span class="material-symbols-outlined mi-sm">download</span> Descargar Excel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Barra flotante: bajas seleccionadas para el formato -->
+<div class="sel-bar" id="selBar" aria-live="polite">
+    <span class="sel-bar-texto" id="selBarTexto"><span class="material-symbols-outlined mi-sm">checklist</span> <span><strong id="selBarConteo">0</strong> seleccionada(s)</span></span>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="limpiarSeleccion()">Quitar selección</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick="abrirFormato()"><span class="material-symbols-outlined mi-sm">table_view</span> Generar formato</button>
 </div>
 
 <!-- Modal: Validar/Rechazar -->
@@ -452,6 +508,75 @@ function abrirValidar(id, estado) {
         : 'btn btn-danger btn-full';
     openModal('modalValidar');
 }
+
+// ---- Formato de baja: selección de equipos (delegado: la lista se recarga por AJAX) ----
+function bajasSeleccionadas() {
+    return [...document.querySelectorAll('.sel-baja:checked')].map(c => c.value);
+}
+
+function actualizarSeleccion() {
+    const casillas = document.querySelectorAll('.sel-baja');
+    const n = bajasSeleccionadas().length;
+    casillas.forEach(c => c.closest('.baja-card')?.classList.toggle('seleccionada', c.checked));
+
+    const todas = document.getElementById('selTodasBajas');
+    if (todas) {
+        todas.checked = n > 0 && n === casillas.length;
+        todas.indeterminate = n > 0 && n < casillas.length;
+    }
+    document.getElementById('selBar').classList.toggle('visible', n > 0);
+    document.getElementById('selBarConteo').textContent = n;
+}
+
+function limpiarSeleccion() {
+    document.querySelectorAll('.sel-baja').forEach(c => c.checked = false);
+    actualizarSeleccion();
+}
+
+document.addEventListener('change', function (e) {
+    if (e.target.id === 'selTodasBajas') {
+        document.querySelectorAll('.sel-baja').forEach(c => c.checked = e.target.checked);
+    }
+    if (e.target.id === 'selTodasBajas' || e.target.classList.contains('sel-baja')) actualizarSeleccion();
+});
+
+// Cuando la lista se recarga por AJAX (validar/eliminar) se pierden las casillas: resincroniza la barra
+new MutationObserver(() => requestAnimationFrame(actualizarSeleccion))
+    .observe(document.querySelector('.main-content'), { childList: true });
+
+function abrirFormato() {
+    const ids = bajasSeleccionadas();
+    if (!ids.length) {
+        zToast('Marca la casilla de al menos una baja para generar el formato.', 'warning');
+        return;
+    }
+    document.getElementById('formatoIds').innerHTML = '<input type="hidden" name="ids" value="' + ids.join(',') + '">';
+    document.getElementById('formatoConteo').textContent = ids.length;
+    openModal('modalFormato');
+}
+
+// El modal de formato abre la vista previa aquí mismo (o descarga el Excel), sin ventanas nuevas
+document.getElementById('formFormato').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const qs = new URLSearchParams(new FormData(this)).toString();
+    const excel = '/pages/formato_baja_excel.php?' + qs;
+    closeModal('modalFormato');
+    if (e.submitter && e.submitter.hasAttribute('formaction')) {
+        descargarExcel(excel);
+    } else {
+        zVista('/pages/formato_baja.php?' + qs, 'Formato de Baja', excel);
+    }
+});
+
+function descargarExcel(url) {
+    zToast('Descargando el formato en Excel…', 'success');
+    window.location.href = url; // es un adjunto: el navegador lo descarga sin salir de la página
+}
+
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.getElementById('modalFormato').classList.contains('open')) closeModal('modalFormato');
+});
 
 // Abrir modal de nueva baja si viene de agregar uno
 <?php if ($verPdf): ?>

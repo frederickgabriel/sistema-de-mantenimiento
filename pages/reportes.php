@@ -443,7 +443,7 @@ endif;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Reportes — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=13">
+    <link rel="stylesheet" href="/css/estilos.css?v=18">
 </head>
 <body>
 <div class="app-layout">
@@ -598,7 +598,7 @@ endif;
             <button class="modal-close" onclick="closeModal('modalPeriodoPDF')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
-            <form method="GET" action="/pages/reportes.php" target="_blank" id="formReportePDF">
+            <form method="GET" action="/pages/reportes.php" id="formReportePDF">
                 <input type="hidden" name="pdf" value="1">
 
                 <div class="form-group">
@@ -647,8 +647,8 @@ endif;
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">download</span> Descargar PDF</button>
-                <a href="/pages/reportes.php?pdf=1&tipo=mantenimientos" target="_blank" class="btn btn-ghost btn-full" id="linkTodoHistorial" style="margin-top:10px">Descargar todo el historial reciente</a>
+                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">visibility</span> Ver reporte PDF</button>
+                <a href="/pages/reportes.php?pdf=1&tipo=mantenimientos" data-vista="Reporte de Mantenimientos — historial reciente" class="btn btn-ghost btn-full" id="linkTodoHistorial" style="margin-top:10px"><span class="material-symbols-outlined mi-sm">history</span> Ver todo el historial reciente</a>
             </form>
         </div>
     </div>
@@ -659,6 +659,22 @@ function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+
+// El formulario abre el reporte en la vista previa de esta misma página (sin ventana nueva)
+document.getElementById('formReportePDF').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    var esM = fd.get('tipo') === 'mantenimientos';
+    if (esM && fd.get('desde') > fd.get('hasta')) {
+        zToast('La fecha "Desde" no puede ser posterior a "Hasta".', 'warning');
+        return;
+    }
+    // Solo los filtros del tipo elegido (los del otro tipo están ocultos y no deben viajar)
+    var qs = new URLSearchParams({ pdf: 1, tipo: fd.get('tipo') });
+    (esM ? ['desde', 'hasta'] : ['area', 'estado']).forEach(function (k) { if (fd.get(k)) qs.set(k, fd.get(k)); });
+    closeModal('modalPeriodoPDF');
+    zVista('/pages/reportes.php?' + qs, esM ? 'Reporte de Mantenimientos' : 'Inventario de Equipos');
 });
 
 function cambiarTipoReporte() {

@@ -307,6 +307,38 @@ a:hover { text-decoration: underline; }
 .alert-info    { background: rgba(91,33,182,0.08); border-color: var(--accent);  color: var(--accent); }
 .alert-warning { background: rgba(154,103,0,0.08); border-color: var(--warning); color: var(--warning); }
 
+/* Toast flotante (zToast en js/ui.js): misma .alert, con fondo sólido y animación */
+.z-toast-zona { position: fixed; top: 16px; right: 16px; left: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
+.z-toast {
+    position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px;
+    max-width: 420px; margin: 0; pointer-events: auto; cursor: pointer;
+    background: var(--bg-card) !important; /* sólido: el tinte lo pone ::before */
+    box-shadow: 0 10px 24px rgba(20,20,40,.15);
+    animation: zToastIn .28s var(--ease-out) both;
+}
+.z-toast::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: .08; pointer-events: none; }
+.z-toast .material-symbols-outlined { flex-shrink: 0; }
+.z-toast.saliendo { animation: zToastOut .18s ease-in forwards; }
+@keyframes zToastIn  { from { opacity: 0; transform: translateX(24px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes zToastOut { to { opacity: 0; transform: translateX(24px) scale(.97); } }
+
+/* Vista previa de documentos imprimibles (zVista en js/ui.js) */
+.modal-box.z-vista-box { max-width: 1080px; height: 92vh; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+.z-vista-header { padding-bottom: 14px; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.z-vista-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.z-vista-acciones .btn:disabled { opacity: .45; cursor: not-allowed; }
+.z-vista-cuerpo { position: relative; flex: 1; min-height: 0; background: #74777a; }
+.z-vista-cuerpo iframe { width: 100%; height: 100%; border: 0; display: block; opacity: 0; transition: opacity .25s ease; }
+.z-vista-cuerpo.cargado iframe { opacity: 1; }
+.z-vista-cargando { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #fff; font-size: 14px; transition: opacity .2s ease; }
+.z-vista-cuerpo.cargado .z-vista-cargando { opacity: 0; pointer-events: none; }
+.z-vista-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.3); border-top-color: #fff; animation: zVistaGiro .8s linear infinite; }
+@keyframes zVistaGiro { to { transform: rotate(360deg); } }
+@media (max-width: 640px) {
+    .modal-box.z-vista-box { height: 96vh; max-height: 96vh; }
+    .z-vista-txt { display: none; }
+}
+
 /* ---- BUTTONS ---- */
 .btn {
     display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px;
@@ -1065,3 +1097,17 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
 }
 
 /* El grid de stats tiene repeat(4,1fr) inline — lo sobreescribimos */
+
+/* ---- Tabla Historial de Mantenimientos (pages/mantenimientos.php) ---- */
+.tbl-mtto { min-width: 900px; }
+.tbl-mtto thead th { padding: 9px 10px; }
+.tbl-mtto tbody td { padding: 12px 10px; white-space: nowrap; }
+.tbl-mtto .text-clip { max-width: 110px; }
+.tbl-mtto .badge-estado { white-space: nowrap; }
+.mtto-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.mtto-fechas { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.mtto-fechas small { display: inline-block; width: 62px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.mtto-acciones { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+.mtto-acciones form { display: contents; }
+.mtto-acciones .btn { flex-shrink: 0; min-width: 32px; padding: 6px 8px; justify-content: center; }
+.mtto-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }

@@ -123,7 +123,7 @@ sistema-de-mantenimiento/
 │   ├── equipos.php                 Departamentos, Áreas e Inventario de Equipos
 │   ├── mantenimientos.php          Historial de mantenimientos + evidencias
 │   ├── tareas.php                  Tareas del equipo técnico
-│   ├── bajas.php / baja_pdf.php / bajas_reporte_pdf.php   Bajas de equipo y sus PDF
+│   ├── bajas.php / formato_baja.php / formato_baja_excel.php   Bajas de equipo y su formato (imprimible y Excel)
 │   ├── calendario.php              Calendario de mantenimientos
 │   ├── Estadisticas.php            Gráficas y estadísticas
 │   ├── reportes.php                Reportes PDF generales
