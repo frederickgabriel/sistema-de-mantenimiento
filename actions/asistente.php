@@ -120,6 +120,29 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
     $ctx .= "- Gestión de Roles (solo Administrador): aprueba/rechaza solicitudes de rol Admin y activa/desactiva/elimina usuarios.\n";
     $ctx .= "- Configuración: cada usuario edita su perfil, foto, contraseña, y puede solicitar el rol de Administrador ahí.\n\n";
 
+    // --- Totales calculados por la base de datos: el modelo cuenta mal en listados largos
+    //     (llegó a responder "15 departamentos o áreas" cuando había 10 departamentos), así que
+    //     cualquier pregunta de "cuántos" debe responderse con estas cifras, no contando líneas. ---
+    $tot = $db->query("
+        SELECT
+            (SELECT COUNT(*) FROM Departamentos)                              AS departamentos,
+            (SELECT COUNT(*) FROM Areas)                                      AS areas,
+            (SELECT COUNT(*) FROM Equipos WHERE estado != 'Baja')             AS equipos_vigentes,
+            (SELECT COUNT(*) FROM Equipos WHERE estado = 'Activo')            AS equipos_activos,
+            (SELECT COUNT(*) FROM Equipos WHERE estado = 'Inactivo')          AS equipos_inactivos,
+            (SELECT COUNT(*) FROM Equipos WHERE estado = 'En Reparacion')     AS equipos_reparacion,
+            (SELECT COUNT(*) FROM Equipos WHERE estado = 'Baja')              AS equipos_baja,
+            (SELECT COUNT(*) FROM Equipos WHERE estado != 'Baja' AND id_area IS NULL) AS equipos_sin_area,
+            (SELECT COUNT(*) FROM Mantenimientos)                             AS mantenimientos
+    ")->fetch();
+    $ctx .= "RESUMEN EN CIFRAS (calculado por la base de datos ahora mismo — para cualquier pregunta de \"cuántos\" usa EXACTAMENTE estos totales, nunca cuentes las líneas de los listados):\n";
+    $ctx .= "- Departamentos registrados: {$tot['departamentos']}\n";
+    $ctx .= "- Áreas registradas (en total, sumando todos los departamentos): {$tot['areas']}\n";
+    $ctx .= "- Equipos vigentes (sin contar los dados de Baja): {$tot['equipos_vigentes']} — Activos: {$tot['equipos_activos']}, Inactivos: {$tot['equipos_inactivos']}, En Reparación: {$tot['equipos_reparacion']}, sin área asignada: {$tot['equipos_sin_area']}\n";
+    $ctx .= "- Equipos dados de Baja: {$tot['equipos_baja']}\n";
+    $ctx .= "- Mantenimientos registrados: {$tot['mantenimientos']}\n";
+    $ctx .= "IMPORTANTE: Departamento y Área NO son lo mismo. Un Departamento (ej. Finanzas) agrupa varias Áreas (ej. Contabilidad, Caja); cada equipo se asigna a un Área. Nunca mezcles ambos conteos.\n\n";
+
     // --- Equipos (listado completo, todas las filas, incluye los dados de Baja marcados como tal) ---
     $equipos = $db->query("SELECT e.numero_inventario, e.modelo, e.marca, e.estado, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area ORDER BY e.numero_inventario LIMIT 500")->fetchAll();
     $ctx .= "LISTADO COMPLETO DE EQUIPOS (" . count($equipos) . " en total, incluye los dados de Baja):\n";
@@ -127,11 +150,28 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
         $ctx .= "- {$e['numero_inventario']} | {$e['modelo']} {$e['marca']} | estado: {$e['estado']} | área: " . ($e['nombre_area'] ?? 'sin área') . "\n";
     }
 
-    // --- Departamentos y Áreas ---
-    $areas = $db->query("SELECT a.nombre_area, d.nombre_departamento, (SELECT COUNT(*) FROM Equipos WHERE id_area=a.id_area AND estado!='Baja') c FROM Areas a JOIN Departamentos d ON a.id_departamento=d.id_departamento ORDER BY d.nombre_departamento, a.nombre_area")->fetchAll();
-    $ctx .= "\nLISTADO COMPLETO DE DEPARTAMENTOS/ÁREAS (" . count($areas) . " áreas en total):\n";
-    foreach ($areas as $a) {
-        $ctx .= "- {$a['nombre_area']} (Depto. {$a['nombre_departamento']}): {$a['c']} equipo(s) vigente(s)\n";
+    // --- Departamentos, cada uno con sus Áreas (LEFT JOIN: también aparecen los departamentos sin áreas) ---
+    $filas = $db->query("
+        SELECT d.id_departamento, d.nombre_departamento, a.nombre_area,
+               (SELECT COUNT(*) FROM Equipos WHERE id_area = a.id_area AND estado != 'Baja') AS c
+        FROM Departamentos d
+        LEFT JOIN Areas a ON a.id_departamento = d.id_departamento
+        ORDER BY d.nombre_departamento, a.nombre_area
+    ")->fetchAll();
+    $deptos = [];
+    foreach ($filas as $f) {
+        $d = &$deptos[$f['id_departamento']];
+        $d['nombre'] ??= $f['nombre_departamento'];
+        $d['areas']  ??= [];
+        $d['equipos'] = ($d['equipos'] ?? 0) + (int)$f['c'];
+        if ($f['nombre_area'] !== null) $d['areas'][] = "{$f['nombre_area']} ({$f['c']} equipo(s))";
+        unset($d);
+    }
+    $ctx .= "\nLISTADO COMPLETO DE DEPARTAMENTOS ({$tot['departamentos']} departamentos, que en conjunto tienen {$tot['areas']} áreas):\n";
+    foreach ($deptos as $d) {
+        $nAreas = count($d['areas']);
+        $ctx .= "- Departamento {$d['nombre']}: {$nAreas} área(s), {$d['equipos']} equipo(s) vigente(s)"
+              . ($nAreas ? " — áreas: " . implode('; ', $d['areas']) : " — sin áreas registradas") . "\n";
     }
 
     // --- Mantenimientos (listado completo) ---
