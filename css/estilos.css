@@ -307,20 +307,51 @@ a:hover { text-decoration: underline; }
 .alert-info    { background: rgba(91,33,182,0.08); border-color: var(--accent);  color: var(--accent); }
 .alert-warning { background: rgba(154,103,0,0.08); border-color: var(--warning); color: var(--warning); }
 
-/* Toast flotante (zToast en js/ui.js): misma .alert, con fondo sólido y animación */
-.z-toast-zona { position: fixed; top: 16px; right: 16px; left: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; }
-.z-toast {
-    position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px;
-    max-width: 420px; margin: 0; pointer-events: auto; cursor: pointer;
-    background: var(--bg-card) !important; /* sólido: el tinte lo pone ::before */
-    box-shadow: 0 10px 24px rgba(20,20,40,.15);
-    animation: zToastIn .28s var(--ease-out) both;
+/* Toast flotante (zToast en js/ui.js): arriba al centro, sin emojis, con barra de tiempo */
+.z-toast-zona {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 2000;
+    width: min(440px, calc(100vw - 24px)); display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+    pointer-events: none;
 }
-.z-toast::before { content: ''; position: absolute; inset: 0; background: currentColor; opacity: .08; pointer-events: none; }
-.z-toast .material-symbols-outlined { flex-shrink: 0; }
-.z-toast.saliendo { animation: zToastOut .18s ease-in forwards; }
-@keyframes zToastIn  { from { opacity: 0; transform: translateX(24px) scale(.97); } to { opacity: 1; transform: none; } }
-@keyframes zToastOut { to { opacity: 0; transform: translateX(24px) scale(.97); } }
+.z-toast {
+    --tc: var(--accent);
+    position: relative; overflow: hidden; pointer-events: auto;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px 14px 14px;
+    background: var(--bg-card); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(20,20,40,.22), 0 2px 6px rgba(20,20,40,.10);
+    animation: zToastIn .32s var(--ease-out) both;
+}
+.z-toast.z-ok   { --tc: var(--success); }
+.z-toast.z-err  { --tc: var(--danger); }
+.z-toast.z-info { --tc: var(--accent); }
+.z-toast.z-warn { --tc: var(--warning); }
+.z-toast-ico {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--tc) 16%, transparent); color: var(--tc);
+}
+.z-toast-ico .material-symbols-outlined { font-size: 20px; }
+.z-toast-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.z-toast-titulo { font-size: 13px; font-weight: 700; line-height: 1.3; color: var(--text-primary); }
+.z-toast-msg { font-size: 13px; line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.z-toast-x {
+    flex-shrink: 0; width: 28px; height: 28px; border: none; border-radius: 8px; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    transition: background .15s ease, color .15s ease;
+}
+.z-toast-x:hover { background: var(--bg-hover); color: var(--text-primary); }
+.z-toast-x .material-symbols-outlined { font-size: 18px; }
+.z-toast-barra {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--tc); opacity: .85;
+    transform-origin: left center; animation: zToastBarra var(--z-dur, 4500ms) linear forwards;
+}
+.z-toast.pausado .z-toast-barra { animation-play-state: paused; }
+.z-toast.saliendo { animation: zToastOut .2s ease-in forwards; }
+@keyframes zToastIn    { from { opacity: 0; transform: translateY(-18px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes zToastOut   { to { opacity: 0; transform: translateY(-14px) scale(.97); } }
+@keyframes zToastBarra { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* Vista previa de documentos imprimibles (zVista en js/ui.js) */
 .modal-box.z-vista-box { max-width: 1080px; height: 92vh; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }

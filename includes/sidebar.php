@@ -185,7 +185,7 @@ if (!function_exists('mascotaZilara')) {
 <script src="/js/asistente.js?v=4" defer></script>
 <?php endif; ?>
 
-<script src="/js/ui.js?v=5"></script>
+<script src="/js/ui.js?v=6"></script>
 <script>
 function sbToggle() {
     const sb  = document.getElementById('sidebar');

@@ -108,27 +108,30 @@ const cargarZona = (function () {
 // Convive con zConfirm sin tocarlo: zConfirm bloquea el primer submit (dispara
 // preventDefault) y, al confirmar, llama form.requestSubmit(), que emite un
 // SEGUNDO evento submit ya no bloqueado — ese es el que este listener procesa.
-// Aviso flotante (toast) con el mismo estilo que las .alert del sistema.
-// Uso: zToast('Texto', 'success' | 'error' | 'info' | 'warning'). Si no se indica el
-// tipo, se deduce del emoji inicial (✅ ❌ 🗑 ⚠), igual que renderMsg() en PHP.
+// Aviso flotante (toast), arriba al centro de la pantalla. Sin emojis: ícono vectorial en círculo,
+// botón de cerrar y barra de tiempo (se pausa al pasar el mouse).
+// Uso: zToast('Texto', 'success' | 'error' | 'info' | 'warning'). Si no se indica el tipo,
+// se deduce del emoji inicial (✅ ❌ 🗑 ⚠) que traen los mensajes del servidor, y el emoji se quita.
 (function () {
     const TIPOS = {
-        success: { cls: 'alert-success', icon: 'check_circle' },
-        error:   { cls: 'alert-error',   icon: 'cancel' },
-        info:    { cls: 'alert-info',    icon: 'info' },
-        warning: { cls: 'alert-warning', icon: 'warning' },
+        success: { cls: 'z-ok',   icon: 'check_circle', titulo: 'Listo' },
+        error:   { cls: 'z-err',  icon: 'error',        titulo: 'Error' },
+        info:    { cls: 'z-info', icon: 'info',         titulo: 'Información' },
+        warning: { cls: 'z-warn', icon: 'warning',      titulo: 'Atención' },
     };
     const EMOJIS = { '✅': 'success', '❌': 'error', '🚫': 'error', '🗑': 'info', '⚠': 'warning' };
+    const DURACION = 4500;
 
     window.zToast = function (msg, tipo) {
         if (!msg) return;
         for (const emoji in EMOJIS) {
             if (msg.startsWith(emoji)) {
                 tipo = tipo || EMOJIS[emoji];
-                msg = msg.slice(emoji.length).replace(/^️/, '').trim();
+                msg = msg.slice(emoji.length);
                 break;
             }
         }
+        msg = msg.replace(/^[\s\uFE0F]+/, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F]/gu, '');
         const t = TIPOS[tipo] || TIPOS.info;
 
         let zona = document.getElementById('ajaxToastZona');
@@ -140,20 +143,32 @@ const cargarZona = (function () {
             document.body.appendChild(zona);
         }
         const el = document.createElement('div');
-        el.className = 'alert z-toast ' + t.cls;
+        el.className = 'z-toast ' + t.cls;
         el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
-        el.innerHTML = '<span class="material-symbols-outlined mi-sm"></span><span class="z-toast-msg"></span>';
-        el.firstChild.textContent = t.icon;
-        el.lastChild.textContent = msg;
+        el.style.setProperty('--z-dur', DURACION + 'ms');
+        el.innerHTML =
+            '<span class="z-toast-ico"><span class="material-symbols-outlined"></span></span>' +
+            '<span class="z-toast-cuerpo"><strong class="z-toast-titulo"></strong><span class="z-toast-msg"></span></span>' +
+            '<button type="button" class="z-toast-x" aria-label="Cerrar aviso"><span class="material-symbols-outlined">close</span></button>' +
+            '<span class="z-toast-barra"></span>';
+        el.querySelector('.z-toast-ico .material-symbols-outlined').textContent = t.icon;
+        el.querySelector('.z-toast-titulo').textContent = t.titulo;
+        el.querySelector('.z-toast-msg').textContent = msg;
         zona.appendChild(el);
 
+        let restante = DURACION, inicio = Date.now(), timer;
         const cerrar = () => {
+            clearTimeout(timer);
+            if (el.classList.contains('saliendo')) return;
             el.classList.add('saliendo');
             el.addEventListener('animationend', () => el.remove(), { once: true });
             setTimeout(() => el.remove(), 400); // por si no hay animación (reduced-motion)
         };
-        el.addEventListener('click', cerrar);
-        setTimeout(cerrar, 4500);
+        const arrancar = () => { inicio = Date.now(); timer = setTimeout(cerrar, restante); };
+        el.addEventListener('mouseenter', () => { clearTimeout(timer); restante -= Date.now() - inicio; el.classList.add('pausado'); });
+        el.addEventListener('mouseleave', () => { el.classList.remove('pausado'); arrancar(); });
+        el.querySelector('.z-toast-x').addEventListener('click', cerrar);
+        arrancar();
     };
 })();
 
