@@ -890,6 +890,41 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
     }
 }
 
+/* ---- TRANSICIÓN ENTRE APARTADOS ----
+   View Transitions entre documentos: al navegar a otra página, el contenido saliente se desvanece
+   rápido y el nuevo entra con un fundido + leve subida; el menú lateral, la barra superior móvil y
+   el botón del asistente se quedan quietos (continuidad espacial: lo que no cambia, no se mueve).
+   Los view-transition-name solo se ponen mientras dura la transición (clase .vt-activa, ver
+   includes/sidebar.php): si fueran permanentes, .main-content se volvería un contexto de apilamiento
+   y los modales que viven dentro quedarían por debajo del sidebar. */
+@view-transition { navigation: auto; }
+
+.vt-activa .sidebar      { view-transition-name: menu-lateral; }
+.vt-activa .topbar       { view-transition-name: barra-superior; }
+.vt-activa .chat-fab     { view-transition-name: asistente; }
+.vt-activa .main-content { view-transition-name: contenido; }
+
+/* Elementos fijos: sin animación, se muestra directamente su estado nuevo */
+::view-transition-group(menu-lateral), ::view-transition-group(barra-superior), ::view-transition-group(asistente),
+::view-transition-new(menu-lateral),   ::view-transition-new(barra-superior),   ::view-transition-new(asistente) { animation: none; }
+::view-transition-old(menu-lateral),   ::view-transition-old(barra-superior),   ::view-transition-old(asistente) { display: none; }
+
+/* Contenido: la salida es más corta que la entrada para que la navegación se sienta ágil */
+::view-transition-group(contenido) { animation: none; }
+::view-transition-old(contenido)   { animation: vtSalida 150ms ease-in both; }
+::view-transition-new(contenido)   { animation: vtEntrada 260ms var(--ease-out) 40ms both; }
+@keyframes vtSalida  { to   { opacity: 0; transform: translateY(-6px); } }
+@keyframes vtEntrada { from { opacity: 0; transform: translateY(10px); } }
+
+/* Navegadores sin View Transitions entre documentos (p. ej. Firefox): solo la entrada.
+   fill-mode "backwards" para que al terminar no quede un transform aplicado (rompería los modales fijos). */
+.sin-vt .main-content { animation: vtEntrada 260ms var(--ease-out) backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+    .sin-vt .main-content { animation: none; }
+}
+
 /* ============================================
    MÓDULO EMPLEADOS + AVATARES + EVIDENCIAS + LIGHTBOX
    ============================================ */

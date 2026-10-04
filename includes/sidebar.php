@@ -38,13 +38,7 @@ if ($esAdm) {
 ?>
 
 <script>
-(function () {
-    try {
-        var guardado = localStorage.getItem('theme');
-        var tema = guardado || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        if (tema === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-    } catch (e) {}
-})();
+// (El tema claro/oscuro se aplica en el <head> de cada página: includes/tema_inicial.php)
 
 // Sidebar contraído: se aplica AQUÍ, antes de que el navegador pinte el menú. Si se aplicara al
 // final (como antes), cada página se pintaba expandida y luego animaba el cierre al navegar.
@@ -63,6 +57,26 @@ if ($esAdm) {
             });
         });
     } catch (e) {}
+})();
+
+// Transición entre apartados (CSS en estilos.css, "TRANSICIÓN ENTRE APARTADOS"). Los nombres de
+// transición se activan solo mientras dura: en la página que se va (pageswap) y en la que llega
+// (pagereveal, que se dispara antes del primer pintado — por eso este script va al inicio).
+(function () {
+    var root = document.documentElement;
+    if (!('onpagereveal' in window)) { root.classList.add('sin-vt'); return; }
+    window.addEventListener('pageswap', function (e) {
+        if (e.viewTransition) root.classList.add('vt-activa');
+    });
+    window.addEventListener('pagereveal', function (e) {
+        if (!e.viewTransition) return;
+        root.classList.add('vt-activa');
+        e.viewTransition.finished.finally(function () { root.classList.remove('vt-activa'); });
+    });
+    // Al volver con el botón "Atrás" la página puede salir del bfcache con la clase aún puesta.
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) root.classList.remove('vt-activa');
+    });
 })();
 </script>
 <style>
