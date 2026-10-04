@@ -519,14 +519,46 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
     </main>
 </div>
 
+<style>
+/* Despliegue de áreas: fade + deslizamiento escalonado (solo opacity/transform) */
+.depto-row { transition: background .15s ease; }
+.depto-row:hover { background: var(--bg-hover, rgba(127,127,127,.08)); }
+.depto-caret { display:inline-block; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.depto-caret.abierto { transform: rotate(90deg); }
+.area-row.entrando > td { animation: areaIn .26s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.area-row.saliendo > td { animation: areaOut .16s ease-in both; animation-delay: calc(var(--i, 0) * 20ms); }
+@keyframes areaIn  { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+@keyframes areaOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) {
+    .depto-caret { transition:none; }
+    .area-row.entrando > td, .area-row.saliendo > td { animation:none; }
+}
+</style>
 <script>
 function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 function toggleDepto(id) {
-    const abrir = document.querySelector('.area-row[data-depto="'+id+'"]')?.style.display === 'none';
-    document.querySelectorAll('.area-row[data-depto="'+id+'"]').forEach(r => r.style.display = abrir ? '' : 'none');
+    const filas = document.querySelectorAll('.area-row[data-depto="'+id+'"]');
+    if (!filas.length) return;
+    const abrir = filas[0].style.display === 'none' || filas[0].classList.contains('saliendo');
     const caret = document.getElementById('caret-'+id);
-    if (caret) caret.textContent = abrir ? 'expand_more' : 'chevron_right';
+    if (caret) caret.classList.toggle('abierto', abrir);
+    const sinAnim = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    filas.forEach((r, i) => {
+        clearTimeout(r._t);
+        r.style.setProperty('--i', i);
+        r.classList.remove('entrando', 'saliendo');
+        if (abrir) {
+            r.style.display = '';
+            if (!sinAnim) { void r.offsetWidth; r.classList.add('entrando'); }
+        } else if (sinAnim) {
+            r.style.display = 'none';
+        } else {
+            void r.offsetWidth;
+            r.classList.add('saliendo');
+            r._t = setTimeout(() => { r.style.display = 'none'; r.classList.remove('saliendo'); }, 160 + i * 20 + 20);
+        }
+    });
 }
 document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');

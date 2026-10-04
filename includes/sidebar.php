@@ -45,7 +45,29 @@ if ($esAdm) {
         if (tema === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     } catch (e) {}
 })();
+
+// Sidebar contraído: se aplica AQUÍ, antes de que el navegador pinte el menú. Si se aplicara al
+// final (como antes), cada página se pintaba expandida y luego animaba el cierre al navegar.
+// .sb-sin-transicion apaga las transiciones durante la carga y se quita tras el primer pintado.
+(function () {
+    try {
+        if (localStorage.getItem('sidebarCollapsed') !== '1' || window.innerWidth <= 768) return;
+        var root = document.documentElement;
+        root.classList.add('sb-sin-transicion');
+        var layout = document.querySelector('.app-layout');
+        if (layout) layout.classList.add('sidebar-collapsed');
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('sidebarHamBtn')?.classList.add('open');
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { root.classList.remove('sb-sin-transicion'); });
+            });
+        });
+    } catch (e) {}
+})();
 </script>
+<style>
+.sb-sin-transicion *, .sb-sin-transicion *::before, .sb-sin-transicion *::after { transition: none !important; }
+</style>
 
 <?php include __DIR__ . '/lightbox.php'; ?>
 
@@ -218,12 +240,7 @@ function sbCollapseToggle() {
     document.getElementById('sidebarHamBtn')?.classList.toggle('open', collapsed);
     localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
 }
-(function () {
-    if (localStorage.getItem('sidebarCollapsed') === '1' && window.innerWidth > 768) {
-        document.querySelector('.app-layout')?.classList.add('sidebar-collapsed');
-        document.getElementById('sidebarHamBtn')?.classList.add('open');
-    }
-})();
+// (El estado guardado se restaura al inicio de este archivo, antes del primer pintado.)
 
 // Modo claro / oscuro
 (function () {
