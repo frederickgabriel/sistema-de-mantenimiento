@@ -504,7 +504,8 @@ $iniciales  = substr($iniciales, 0, 2);
                     <div class="avatar-wrap">
                         <?php if ($usuario['foto_perfil'] ?? null): ?>
                             <img src="/uploads/perfiles/<?= e($usuario['foto_perfil']) ?>"
-                                 alt="Foto" class="avatar-img">
+                                 alt="Foto" class="avatar-img" style="cursor:zoom-in"
+                                 onclick="abrirLightbox(this.src)">
                         <?php else: ?>
                             <div class="avatar-initials"><?= e($iniciales) ?></div>
                         <?php endif; ?>
@@ -560,7 +561,8 @@ $iniciales  = substr($iniciales, 0, 2);
                             <div class="foto-preview-wrap">
                                 <?php if ($usuario['foto_perfil'] ?? null): ?>
                                     <img src="/uploads/perfiles/<?= e($usuario['foto_perfil']) ?>"
-                                         alt="Foto de perfil" class="foto-preview" id="fotoActual">
+                                         alt="Foto de perfil" class="foto-preview" id="fotoActual"
+                                         style="cursor:zoom-in" onclick="abrirLightbox(this.src)">
                                     <img src="" class="foto-preview" id="previewImg">
                                 <?php else: ?>
                                     <div class="foto-initials-big" id="fotoActualInitials"><?= e($iniciales) ?></div>
@@ -1047,5 +1049,6 @@ function verificarMatch() {
 }
 </script>
 
+<?php include '../includes/lightbox.php'; ?>
 </body>
 </html>

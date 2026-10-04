@@ -1,3 +1,4 @@
+<?php if (defined('LIGHTBOX_INCLUIDO')) return; define('LIGHTBOX_INCLUIDO', true); ?>
 <!-- Lightbox reutilizable: amplía cualquier foto de perfil o evidencia -->
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="cerrarLightbox(event)">
     <button class="lightbox-close" onclick="cerrarLightbox(event)" aria-label="Cerrar">

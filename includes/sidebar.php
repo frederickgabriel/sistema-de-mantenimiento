@@ -47,6 +47,8 @@ if ($esAdm) {
 })();
 </script>
 
+<?php include __DIR__ . '/lightbox.php'; ?>
+
 <!-- Topbar móvil (solo visible en pantallas pequeñas) -->
 <div class="topbar" id="topbar">
     <button class="topbar-ham" id="hamBtn" onclick="sbToggle()" aria-label="Abrir menú">
@@ -78,7 +80,8 @@ if ($esAdm) {
     <div class="sidebar-user">
         <?php if ($foto): ?>
             <img src="/uploads/perfiles/<?= htmlspecialchars($foto) ?>"
-                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0" alt="Foto">
+                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;cursor:zoom-in" alt="Foto"
+                 onclick="abrirLightbox(this.src)">
         <?php else: ?>
             <div class="user-avatar"><?= $inicial ?></div>
         <?php endif; ?>
