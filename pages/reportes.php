@@ -81,7 +81,7 @@ $urgentes = $db->query("
 ")->fetchAll();
 
 // =============================================
-// FILTROS — Equipos (área / estado)
+// FILTROS — Equipos (departamento / estado)
 // =============================================
 $areasSelect       = $db->query("SELECT id_area, nombre_area FROM Areas ORDER BY nombre_area")->fetchAll();
 $estadosValidosRep  = ['Activo', 'Inactivo', 'En Reparacion'];
@@ -225,7 +225,7 @@ if ($generarPDF && $tipoReporte === 'equipos'):
                     <th>Procesador</th>
                     <th>RAM</th>
                     <th>Disco</th>
-                    <th>Área</th>
+                    <th>Departamento</th>
                     <th>Usuario Responsable</th>
                 </tr>
             </thead>
@@ -379,7 +379,7 @@ if ($generarPDF):
         <table class="fmt-hoja">
             <caption>Equipos con Mantenimiento Próximo o Vencido (30 días)</caption>
             <thead>
-                <tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Próx. Mantenimiento</th><th>Estado</th></tr>
+                <tr><th>No. Inventario</th><th>Modelo</th><th>Departamento</th><th>Próx. Mantenimiento</th><th>Estado</th></tr>
             </thead>
             <tbody>
                 <?php foreach ($urgentes as $u): $dias = (int)$u['dias'];
@@ -400,7 +400,7 @@ if ($generarPDF):
         <table class="fmt-hoja">
             <caption>Historial de Mantenimientos — <?= e($periodoTexto) ?></caption>
             <thead>
-                <tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha Inicio</th><th>Fecha Entrega</th><th>Próx. Cita</th><th>Técnico</th></tr>
+                <tr><th>No. Inventario</th><th>Modelo</th><th>Departamento</th><th>Tipo</th><th>Fecha Inicio</th><th>Fecha Entrega</th><th>Próx. Cita</th><th>Técnico</th></tr>
             </thead>
             <tbody>
                 <?php if (empty($mantenimientos)): ?>
@@ -491,7 +491,7 @@ endif;
             </div>
             <div class="table-wrapper">
                 <table>
-                    <thead><tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Próx. Mantenimiento</th><th>Días</th></tr></thead>
+                    <thead><tr><th>No. Inventario</th><th>Modelo</th><th>Departamento</th><th>Próx. Mantenimiento</th><th>Días</th></tr></thead>
                     <tbody>
                     <?php foreach ($urgentes as $u): ?>
                     <tr>
@@ -528,7 +528,7 @@ endif;
                 <?php else: ?>
                 <table>
                     <thead>
-                        <tr><th>Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha</th><th>Próx. Cita</th></tr>
+                        <tr><th>Inventario</th><th>Modelo</th><th>Departamento</th><th>Tipo</th><th>Fecha</th><th>Próx. Cita</th></tr>
                     </thead>
                     <tbody>
                     <?php foreach (array_slice($mantenimientos, 0, 50) as $m): ?>
@@ -569,7 +569,7 @@ endif;
                 <?php else: ?>
                 <table>
                     <thead>
-                        <tr><th>Inventario</th><th>Modelo</th><th>Área</th><th>Dueño</th><th>Estado</th></tr>
+                        <tr><th>Inventario</th><th>Modelo</th><th>Departamento</th><th>Dueño</th><th>Estado</th></tr>
                     </thead>
                     <tbody>
                     <?php foreach (array_slice($equiposRep, 0, 50) as $eq): ?>
@@ -624,12 +624,12 @@ endif;
                 </div>
 
                 <div id="camposEquipos" style="display:none">
-                    <p class="page-subtitle" style="margin:-4px 0 16px">Filtra opcionalmente por área o estado (déjalo en blanco para el inventario completo).</p>
+                    <p class="page-subtitle" style="margin:-4px 0 16px">Filtra opcionalmente por departamento o estado (déjalo en blanco para el inventario completo).</p>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Área</label>
+                            <label>Departamento</label>
                             <select name="area">
-                                <option value="">Todas las áreas</option>
+                                <option value="">Todos los departamentos</option>
                                 <?php foreach ($areasSelect as $a): ?>
                                 <option value="<?= $a['id_area'] ?>"><?= e($a['nombre_area']) ?></option>
                                 <?php endforeach; ?>

@@ -102,8 +102,9 @@ $equiposActivos = $db->query("
     ORDER BY numero_inventario
 ")->fetchAll();
 
-// Departamentos registrados (campo DEPTO del formato de baja)
-$departamentos = $db->query("SELECT nombre_departamento FROM Departamentos ORDER BY nombre_departamento")->fetchAll(PDO::FETCH_COLUMN);
+// Departamentos registrados (campo DEPTO del formato de baja). Un "Departamento" es un registro de la tabla Areas
+// (la tabla Departamentos guarda lo que ahora se llama "Área"); DISTINCT por si varias áreas tienen un departamento con el mismo nombre.
+$departamentos = $db->query("SELECT DISTINCT nombre_area FROM Areas ORDER BY nombre_area")->fetchAll(PDO::FETCH_COLUMN);
 
 // ¿Ver baja específica para PDF?
 $bajaDetalle = null;
@@ -276,7 +277,7 @@ if ($verPdf) {
                         <input type="checkbox" class="sel-baja" value="<?= $b['id_baja'] ?>" title="Incluir en el formato de baja" style="margin-top:4px;width:16px;height:16px;cursor:pointer">
                         <div>
                         <div class="baja-inv"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">delete_forever</span> <span class="text-clip" title="<?= e($b['numero_inventario']) ?>" style="max-width:200px"><?= e($b['numero_inventario']) ?></span></div>
-                        <div class="baja-modelo"><span class="text-clip" title="<?= e($b['modelo'].' '.($b['marca'] ?? '').' — '.($b['nombre_area'] ?? 'Sin área')) ?>" style="max-width:360px"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin área') ?></span></div>
+                        <div class="baja-modelo"><span class="text-clip" title="<?= e($b['modelo'].' '.($b['marca'] ?? '').' — '.($b['nombre_area'] ?? 'Sin departamento')) ?>" style="max-width:360px"><?= e($b['modelo']) ?> <?= e($b['marca'] ?? '') ?> — <?= e($b['nombre_area'] ?? 'Sin departamento') ?></span></div>
                         </div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">

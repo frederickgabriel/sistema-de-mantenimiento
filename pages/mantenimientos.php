@@ -176,7 +176,7 @@ if ($mantenimientos) {
     <div class="card-header"><div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Historial de Mantenimientos</div><span class="text-muted" style="font-size:13px"><?= count($mantenimientos) ?> registros</span></div>
     <div class="table-wrapper">
     <?php if(empty($mantenimientos)): ?><div class="empty-state"><span class="empty-icon material-symbols-outlined">build</span><p>No hay mantenimientos registrados.</p></div>
-    <?php else: ?><table class="tbl-mtto"><thead><tr><th>Equipo</th><th>Área</th><th>Tipo / Estado</th><th>Fechas</th><th>Próx. Mantenimiento</th><th>Técnico</th><th>Acciones</th></tr></thead><tbody>
+    <?php else: ?><table class="tbl-mtto"><thead><tr><th>Equipo</th><th>Departamento</th><th>Tipo / Estado</th><th>Fechas</th><th>Próx. Mantenimiento</th><th>Técnico</th><th>Acciones</th></tr></thead><tbody>
     <?php foreach($mantenimientos as $m):
         $puede = puedeGestionarMtto($esAdm,$m,$miId);
         $completado = $m['estado'] === 'Completado';
@@ -253,7 +253,7 @@ function abrirDetalle(m){
     const dias = m.proximo_mantenimiento ? m.proximo_mantenimiento : '—';
     document.getElementById('detalleBody').innerHTML = `
         <p><strong>Equipo:</strong> ${m.numero_inventario} — ${m.modelo||''} ${m.marca||''}</p>
-        <p><strong>Área:</strong> ${m.nombre_area||'—'}</p>
+        <p><strong>Departamento:</strong> ${m.nombre_area||'—'}</p>
         <p><strong>Tipo:</strong> ${m.tipo_mantenimiento} &nbsp; <strong>Estado:</strong> ${m.estado}</p>
         <p><strong>Fecha inicio:</strong> ${m.fecha_realizacion||'—'} &nbsp; <strong>Entrega:</strong> ${m.fecha_entrega||'—'}</p>
         <p><strong>Próx. mantenimiento:</strong> ${dias}</p>

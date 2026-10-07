@@ -203,7 +203,7 @@ function guardarEvidencias(PDO $db, array $files, string $origen, int $idOrigen,
 // EXCEPCIÓN: si el equipo tiene algún registro en Bajas, NO se borra nada — un dictamen de baja
 // es un documento permanente y bajas.numero_inventario referencia a Equipos con ON DELETE CASCADE,
 // así que borrar el equipo borraría también su historial de baja. Se usa desde equipos.php al
-// eliminar un Equipo, un Área (borra sus equipos) o un Departamento (borra sus áreas y equipos).
+// eliminar un Equipo, un Departamento (borra sus equipos) o un Área (borra sus departamentos y equipos).
 // Devuelve true si se borró, false si se conservó por tener historial de Baja.
 function eliminarEquipoConDependencias(PDO $db, string $inv): bool {
     $tieneBaja = $db->prepare("SELECT COUNT(*) FROM Bajas WHERE numero_inventario=?");
@@ -233,8 +233,8 @@ function eliminarEquipoConDependencias(PDO $db, string $inv): bool {
     return true;
 }
 
-// Borra un Área junto con todos sus Equipos (vía eliminarEquipoConDependencias — conserva los que
-// tengan Baja) y finalmente el Área misma. Devuelve [equiposBorrados, equiposConservadosPorBaja].
+// Borra un Departamento (tabla Areas) junto con todos sus Equipos (vía eliminarEquipoConDependencias — conserva los que
+// tengan Baja) y finalmente el Departamento mismo. Devuelve [equiposBorrados, equiposConservadosPorBaja].
 function eliminarAreaConDependencias(PDO $db, int $idArea): array {
     $borrados = 0; $conservados = 0;
     $stmt = $db->prepare("SELECT numero_inventario FROM Equipos WHERE id_area=?");

@@ -109,11 +109,11 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
 
     $ctx .= "MÓDULOS DEL SISTEMA Y CÓMO SE USAN:\n";
     $ctx .= "- Dashboard: panel resumen con estadísticas generales, actividad de mantenimientos y progreso de tareas.\n";
-    $ctx .= "- Equipos y Áreas: inventario de equipos de cómputo y las áreas/salones donde están ubicados. \"Nuevo Equipo\" y \"Nueva Área\" son solo para Administrador.\n";
+    $ctx .= "- Equipos y Departamentos: inventario de equipos de cómputo y los departamentos donde están ubicados, agrupados por Área. \"Nuevo Equipo\", \"Nueva Área\" y \"Nuevo Departamento\" son solo para Administrador.\n";
     $ctx .= "- Mantenimientos: registro de mantenimientos Preventivos y Correctivos por equipo, con fecha de próxima cita automática (+6 meses) y evidencia fotográfica opcional.\n";
     $ctx .= "- Tareas: pendientes/en proceso/realizadas/no realizadas, con prioridad Alta/Media/Baja; un usuario normal solo ve y crea las suyas, el Administrador puede asignarlas a cualquiera.\n";
     $ctx .= "- Calendario: vista mensual de próximos mantenimientos y mantenimientos ya realizados.\n";
-    $ctx .= "- Estadísticas: gráficos de equipos por área, mantenimientos por mes, top equipos con más mantenimientos, etc.\n";
+    $ctx .= "- Estadísticas: gráficos de equipos por departamento, mantenimientos por mes, top equipos con más mantenimientos, etc.\n";
     $ctx .= "- Reportes PDF: genera reportes filtrables de mantenimientos o equipos para descargar/imprimir.\n";
     $ctx .= "- Bajas de Equipos (solo Administrador): da de baja un equipo con motivo, diagnóstico técnico y dictamen PDF; el equipo queda en estado Baja y deja de contar como inventario vigente.\n";
     $ctx .= "- Empleados (solo Administrador): actividad de cada técnico (tareas realizadas, mantenimientos, fotos subidas).\n";
@@ -136,21 +136,21 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
             (SELECT COUNT(*) FROM Mantenimientos)                             AS mantenimientos
     ")->fetch();
     $ctx .= "RESUMEN EN CIFRAS (calculado por la base de datos ahora mismo — para cualquier pregunta de \"cuántos\" usa EXACTAMENTE estos totales, nunca cuentes las líneas de los listados):\n";
-    $ctx .= "- Departamentos registrados: {$tot['departamentos']}\n";
-    $ctx .= "- Áreas registradas (en total, sumando todos los departamentos): {$tot['areas']}\n";
-    $ctx .= "- Equipos vigentes (sin contar los dados de Baja): {$tot['equipos_vigentes']} — Activos: {$tot['equipos_activos']}, Inactivos: {$tot['equipos_inactivos']}, En Reparación: {$tot['equipos_reparacion']}, sin área asignada: {$tot['equipos_sin_area']}\n";
+    $ctx .= "- Áreas registradas: {$tot['departamentos']}\n";
+    $ctx .= "- Departamentos registrados (en total, sumando todas las áreas): {$tot['areas']}\n";
+    $ctx .= "- Equipos vigentes (sin contar los dados de Baja): {$tot['equipos_vigentes']} — Activos: {$tot['equipos_activos']}, Inactivos: {$tot['equipos_inactivos']}, En Reparación: {$tot['equipos_reparacion']}, sin departamento asignado: {$tot['equipos_sin_area']}\n";
     $ctx .= "- Equipos dados de Baja: {$tot['equipos_baja']}\n";
     $ctx .= "- Mantenimientos registrados: {$tot['mantenimientos']}\n";
-    $ctx .= "IMPORTANTE: Departamento y Área NO son lo mismo. Un Departamento (ej. Finanzas) agrupa varias Áreas (ej. Contabilidad, Caja); cada equipo se asigna a un Área. Nunca mezcles ambos conteos.\n\n";
+    $ctx .= "IMPORTANTE: Área y Departamento NO son lo mismo. Un Área (ej. Administración) agrupa varios Departamentos (ej. Contabilidad, Caja); cada equipo se asigna a un Departamento. Nunca mezcles ambos conteos.\n\n";
 
     // --- Equipos (listado completo, todas las filas, incluye los dados de Baja marcados como tal) ---
     $equipos = $db->query("SELECT e.numero_inventario, e.modelo, e.marca, e.estado, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area ORDER BY e.numero_inventario LIMIT 500")->fetchAll();
     $ctx .= "LISTADO COMPLETO DE EQUIPOS (" . count($equipos) . " en total, incluye los dados de Baja):\n";
     foreach ($equipos as $e) {
-        $ctx .= "- {$e['numero_inventario']} | {$e['modelo']} {$e['marca']} | estado: {$e['estado']} | área: " . ($e['nombre_area'] ?? 'sin área') . "\n";
+        $ctx .= "- {$e['numero_inventario']} | {$e['modelo']} {$e['marca']} | estado: {$e['estado']} | departamento: " . ($e['nombre_area'] ?? 'sin departamento') . "\n";
     }
 
-    // --- Departamentos, cada uno con sus Áreas (LEFT JOIN: también aparecen los departamentos sin áreas) ---
+    // --- Áreas (tabla Departamentos), cada una con sus Departamentos (tabla Areas; LEFT JOIN: también aparecen las áreas sin departamentos) ---
     $filas = $db->query("
         SELECT d.id_departamento, d.nombre_departamento, a.nombre_area,
                (SELECT COUNT(*) FROM Equipos WHERE id_area = a.id_area AND estado != 'Baja') AS c
@@ -167,11 +167,11 @@ function construirContextoSistema(PDO $db, bool $esAdm, int $miId, string $nombr
         if ($f['nombre_area'] !== null) $d['areas'][] = "{$f['nombre_area']} ({$f['c']} equipo(s))";
         unset($d);
     }
-    $ctx .= "\nLISTADO COMPLETO DE DEPARTAMENTOS ({$tot['departamentos']} departamentos, que en conjunto tienen {$tot['areas']} áreas):\n";
+    $ctx .= "\nLISTADO COMPLETO DE ÁREAS ({$tot['departamentos']} áreas, que en conjunto tienen {$tot['areas']} departamentos):\n";
     foreach ($deptos as $d) {
         $nAreas = count($d['areas']);
-        $ctx .= "- Departamento {$d['nombre']}: {$nAreas} área(s), {$d['equipos']} equipo(s) vigente(s)"
-              . ($nAreas ? " — áreas: " . implode('; ', $d['areas']) : " — sin áreas registradas") . "\n";
+        $ctx .= "- Área {$d['nombre']}: {$nAreas} departamento(s), {$d['equipos']} equipo(s) vigente(s)"
+              . ($nAreas ? " — departamentos: " . implode('; ', $d['areas']) : " — sin departamentos registrados") . "\n";
     }
 
     // --- Mantenimientos (listado completo) ---

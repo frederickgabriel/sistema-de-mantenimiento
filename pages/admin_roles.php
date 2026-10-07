@@ -471,7 +471,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
                                     ['Registrar Mantenimientos',      true,  true],
                                     ['Gestionar Tareas',              true,  true],
                                     ['Ver Calendario',                true,  true],
-                                    ['Crear / Editar Áreas',          true,  false],
+                                    ['Crear / Editar Áreas y Departamentos', true,  false],
                                     ['Crear / Editar Equipos',        true,  false],
                                     ['Eliminar Equipos',              true,  false],
                                     ['Eliminar Mantenimientos',       true,  false],

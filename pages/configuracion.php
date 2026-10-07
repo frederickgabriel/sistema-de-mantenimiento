@@ -891,7 +891,7 @@ $iniciales  = substr($iniciales, 0, 2);
                         <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:22px">
                             <p style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px">¿Qué puede hacer un Administrador?</p>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
-                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Crear y editar Áreas</div>
+                                <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Crear y editar Áreas y Departamentos</div>
                                 <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Crear y eliminar Equipos</div>
                                 <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Eliminar Mantenimientos</div>
                                 <div style="color:var(--success)"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">check_circle</span> Gestionar Bajas de Equipos</div>

@@ -133,7 +133,7 @@ if ($esAdm) {
     <nav class="sidebar-nav">
         <ul>
             <?= navLink('dashboard.php',     'dashboard',        'Dashboard',        $currentPage) ?>
-            <?= navLink('equipos.php',        'computer',         'Equipos y Áreas',  $currentPage) ?>
+            <?= navLink('equipos.php',        'computer',         'Equipos y Departamentos',  $currentPage) ?>
             <?= navLink('mantenimientos.php', 'build',            'Mantenimientos',   $currentPage) ?>
             <?= navLink('tareas.php',         'checklist',        'Tareas',           $currentPage) ?>
             <?= navLink('calendario.php',     'calendar_month',   'Calendario',       $currentPage) ?>

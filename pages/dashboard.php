@@ -124,7 +124,7 @@ $equipoTrabajo = $db->query("
                 <div class="alerta-title"><span class="material-symbols-outlined mi-md">warning</span> Equipos con mantenimiento pendiente o urgente</div>
                 <ul class="alerta-list">
                     <?php foreach ($urgentes as $u): ?>
-                    <li><strong><?= e($u['numero_inventario']) ?></strong> — <?= e($u['modelo']) ?> (<?= e($u['nombre_area'] ?? 'Sin área') ?>):
+                    <li><strong><?= e($u['numero_inventario']) ?></strong> — <?= e($u['modelo']) ?> (<?= e($u['nombre_area'] ?? 'Sin departamento') ?>):
                         <?php if ($u['dias'] < 0): ?><span style="color:var(--danger)">Vencido hace <?= abs((int)$u['dias']) ?> día(s)</span>
                         <?php else: ?><span style="color:var(--warning)">En <?= (int)$u['dias'] ?> día(s) — <?= fechaES($u['proximo_mantenimiento']) ?></span>
                         <?php endif; ?>
@@ -162,7 +162,7 @@ $equipoTrabajo = $db->query("
             </div>
             <div class="dash-stat" style="--stat-color:var(--info);--stat-bg:rgba(9,105,218,.12)">
                 <div class="dash-stat-top">
-                    <div class="dash-stat-label">Áreas / Salones</div>
+                    <div class="dash-stat-label">Departamentos</div>
                     <div class="dash-stat-icon"><span class="material-symbols-outlined mi-md">meeting_room</span></div>
                 </div>
                 <div class="dash-stat-value"><?= $totalAreas ?></div>
@@ -254,7 +254,7 @@ $equipoTrabajo = $db->query("
                 <?php if (empty($ultimos)): ?>
                     <div class="empty-state"><span class="empty-icon material-symbols-outlined">build</span><p>Sin mantenimientos aún.</p></div>
                 <?php else: ?>
-                <table><thead><tr><th>No. Inventario</th><th>Modelo</th><th>Área</th><th>Tipo</th><th>Fecha</th><th>Próx. Mantenimiento</th></tr></thead><tbody>
+                <table><thead><tr><th>No. Inventario</th><th>Modelo</th><th>Departamento</th><th>Tipo</th><th>Fecha</th><th>Próx. Mantenimiento</th></tr></thead><tbody>
                 <?php foreach ($ultimos as $m): ?>
                 <tr>
                     <td class="text-mono"><span class="text-clip" title="<?= e($m['numero_inventario']) ?>" style="max-width:140px"><?= e($m['numero_inventario']) ?></span></td>

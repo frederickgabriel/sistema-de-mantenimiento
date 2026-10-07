@@ -4,14 +4,14 @@ requireLogin();
 
 $db = getDB();
 
-// 1. Equipos por área
+// 1. Equipos por departamento
 $equiposPorArea = $db->query("
     SELECT a.nombre_area, COUNT(e.numero_inventario) as total
     FROM Areas a LEFT JOIN Equipos e ON e.id_area = a.id_area AND e.estado != 'Baja'
     GROUP BY a.id_area, a.nombre_area ORDER BY total DESC
 ")->fetchAll();
 
-// 2. Bajas por área
+// 2. Bajas por departamento
 try {
     $bajasPorArea = $db->query("
         SELECT a.nombre_area, COUNT(b.id_baja) as total
@@ -186,7 +186,7 @@ $chartData = json_encode([
             <div class="kpi-box">
                 <div class="kpi-ico material-symbols-outlined">meeting_room</div>
                 <div class="kpi-val" style="color:var(--info);font-size:16px;word-break:break-word"><?= e(mb_substr($areaMasEq['nombre_area'],0,18)) ?></div>
-                <div class="kpi-lbl">Área con más Equipos</div>
+                <div class="kpi-lbl">Departamento con más Equipos</div>
                 <div class="kpi-sub"><?= $areaMasEq['total'] ?> equipos</div>
             </div>
             <?php endif; ?>
@@ -196,8 +196,8 @@ $chartData = json_encode([
         <div class="section-sep"><span class="material-symbols-outlined mi-md">computer</span> Inventario y Distribución</div>
         <div class="g2">
             <div class="ch-card">
-                <div class="ch-title"><span class="material-symbols-outlined mi-md">bar_chart</span> Equipos por Área</div>
-                <div class="ch-sub">Cantidad de equipos en cada área o salón</div>
+                <div class="ch-title"><span class="material-symbols-outlined mi-md">bar_chart</span> Equipos por Departamento</div>
+                <div class="ch-sub">Cantidad de equipos en cada departamento</div>
                 <div class="ch-wrap" style="height:260px"><canvas id="cArea"></canvas></div>
             </div>
             <div class="ch-card">
@@ -236,8 +236,8 @@ $chartData = json_encode([
         <div class="section-sep"><span class="material-symbols-outlined mi-md">delete_forever</span> Bajas de Equipos</div>
         <div class="g2">
             <div class="ch-card">
-                <div class="ch-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Bajas por Área</div>
-                <div class="ch-sub">Áreas con mayor número de equipos dados de baja</div>
+                <div class="ch-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Bajas por Departamento</div>
+                <div class="ch-sub">Departamentos con mayor número de equipos dados de baja</div>
                 <?php if (empty($bajasPorArea) || array_sum(array_column($bajasPorArea,'total')) == 0): ?>
                     <div class="no-data"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">inbox</span> No hay bajas registradas aún</div>
                 <?php else: ?>
@@ -283,7 +283,7 @@ const scaleOpts = {
     y: { grid:{color:'#edeff3'}, ticks:{color:'#57606a', precision:0}, beginAtZero:true }
 };
 
-// 1. Equipos por Área (barra vertical)
+// 1. Equipos por Departamento (barra vertical)
 if (document.getElementById('cArea') && D.equiposPorArea.data.length)
     new Chart(document.getElementById('cArea'), {
         type: 'bar',
@@ -357,7 +357,7 @@ if (document.getElementById('cTop') && D.topEquipos.labels.length)
         }
     });
 
-// 5. Bajas por Área (pie)
+// 5. Bajas por Departamento (pie)
 if (document.getElementById('cBajasArea') && D.bajasPorArea.data.some(v=>v>0))
     new Chart(document.getElementById('cBajasArea'), {
         type: 'pie',

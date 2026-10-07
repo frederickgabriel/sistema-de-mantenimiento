@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre = trim($_POST['nombre_departamento'] ?? '');
         if ($nombre) {
             $db->prepare("INSERT INTO Departamentos (nombre_departamento) VALUES (?)")->execute([$nombre]);
-            $msg = "✅ Departamento «{$nombre}» registrado.";
+            $msg = "✅ Área «{$nombre}» registrada.";
         } else { $err = 'El nombre es obligatorio.'; }
 
     } elseif ($action === 'eliminar_departamento') {
@@ -45,21 +45,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $db->prepare("DELETE FROM Departamentos WHERE id_departamento=?")->execute([$idDepto]);
         $db->commit();
-        $msg = "🗑 Departamento eliminado, junto con sus áreas y {$borrados} equipo(s).";
-        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin área).";
+        $msg = "🗑 Área eliminada, junto con sus departamentos y {$borrados} equipo(s).";
+        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin departamento).";
 
     } elseif ($action === 'eliminar_area') {
         [$borrados, $conservados] = eliminarAreaConDependencias($db, (int)$_POST['id_area']);
-        $msg = "🗑 Área eliminada, junto con {$borrados} equipo(s) (y sus tareas/mantenimientos).";
-        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin área).";
+        $msg = "🗑 Departamento eliminado, junto con {$borrados} equipo(s) (y sus tareas/mantenimientos).";
+        if ($conservados) $msg .= " {$conservados} equipo(s) con historial de Baja se conservaron (quedaron sin departamento).";
 
     } elseif ($action === 'nueva_area') {
         $nombre = trim($_POST['nombre_area'] ?? '');
         $idDepto = (int)($_POST['id_departamento'] ?? 0);
         if ($nombre && $idDepto) {
             $db->prepare("INSERT INTO Areas (nombre_area, id_departamento) VALUES (?, ?)")->execute([$nombre, $idDepto]);
-            $msg = "✅ Área «{$nombre}» registrada.";
-        } else { $err = 'El nombre y el departamento son obligatorios.'; }
+            $msg = "✅ Departamento «{$nombre}» registrado.";
+        } else { $err = 'El nombre y el área son obligatorios.'; }
 
     } elseif ($action === 'nuevo_equipo') {
         $model  = trim($_POST['modelo'] ?? '');
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (eliminarEquipoConDependencias($db, $inv)) {
             $msg = "🗑 Equipo «{$inv}» eliminado (junto con sus tareas y mantenimientos).";
         } else {
-            $err = "Ese equipo tiene historial de Baja y no se puede eliminar (el dictamen debe conservarse). Puedes reasignarlo a otra área en su lugar.";
+            $err = "Ese equipo tiene historial de Baja y no se puede eliminar (el dictamen debe conservarse). Puedes reasignarlo a otro departamento en su lugar.";
         }
     }
 
@@ -147,7 +147,7 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
     <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16.png">
     <link rel="apple-touch-icon" href="/img/favicon/favicon-180.png">
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
-    <title>Equipos, Departamentos y Áreas — <?= SITE_NAME ?></title>
+    <title>Equipos, Áreas y Departamentos — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
     <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=29">
 </head>
@@ -158,13 +158,13 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
 
         <div class="page-header">
             <div>
-                <div class="page-title"><span class="material-symbols-outlined mi-md">computer</span> Equipos, Departamentos y Áreas</div>
-                <div class="page-subtitle">Inventario y gestión de departamentos y salas de cómputo</div>
+                <div class="page-title"><span class="material-symbols-outlined mi-md">computer</span> Equipos, Áreas y Departamentos</div>
+                <div class="page-subtitle">Inventario y gestión de áreas y departamentos</div>
             </div>
             <?php if (esAdmin()): ?>
             <div class="page-actions">
-                <button class="btn btn-ghost"   onclick="openModal('modalNuevoDepartamento')">+ Nuevo Departamento</button>
-                <button class="btn btn-ghost"   onclick="openModal('modalNuevaArea')">+ Nueva Área</button>
+                <button class="btn btn-ghost"   onclick="openModal('modalNuevoDepartamento')">+ Nueva Área</button>
+                <button class="btn btn-ghost"   onclick="openModal('modalNuevaArea')">+ Nuevo Departamento</button>
                 <button class="btn btn-primary" onclick="abrirNuevoEquipo()">+ Nuevo Equipo</button>
             </div>
             <?php endif; ?>
@@ -181,15 +181,15 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
         <?php endif; ?>
 
         <div id="ajaxFiltroZona">
-        <!-- DEPARTAMENTOS / ÁREAS -->
+        <!-- ÁREAS / DEPARTAMENTOS -->
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
-                <div class="card-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Departamentos / Áreas Registradas</div>
-                <span class="text-muted" style="font-size:13px"><?= count($departamentos) ?> departamentos · <?= count($areas) ?> áreas</span>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Áreas / Departamentos Registrados</div>
+                <span class="text-muted" style="font-size:13px"><?= count($departamentos) ?> áreas · <?= count($areas) ?> departamentos</span>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($departamentos)): ?>
-                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">meeting_room</span><p>No hay departamentos registrados.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">meeting_room</span><p>No hay áreas registradas.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -205,22 +205,22 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                         <td>
                             <span class="material-symbols-outlined mi-sm depto-caret" id="caret-<?= $d['id_departamento'] ?>" style="vertical-align:-6px">chevron_right</span>
                             <strong class="text-clip" title="<?= e($d['nombre_departamento']) ?>" style="max-width:200px"><?= e($d['nombre_departamento']) ?></strong>
-                            <span class="text-muted" style="font-size:12px"> — <?= $d['total_areas'] ?> área<?= $d['total_areas']==1?'':'s' ?></span>
+                            <span class="text-muted" style="font-size:12px"> — <?= $d['total_areas'] ?> departamento<?= $d['total_areas']==1?'':'s' ?></span>
                         </td>
                         <td><span class="badge-estado badge-proceso"><?= array_sum(array_column($areasDelDepto,'total_equipos')) ?> equipos</span></td>
                         <?php if (esAdmin()): ?>
                         <td onclick="event.stopPropagation()">
-                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar este departamento y todas sus áreas?','danger')">
+                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta área y todos sus departamentos?','danger')">
                                 <input type="hidden" name="action" value="eliminar_departamento">
                                 <input type="hidden" name="id_departamento" value="<?= $d['id_departamento'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar departamento"><span class="material-symbols-outlined mi-sm">delete</span></button>
+                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar área"><span class="material-symbols-outlined mi-sm">delete</span></button>
                             </form>
                         </td>
                         <?php endif; ?>
                     </tr>
                     <?php if (empty($areasDelDepto)): ?>
                     <tr class="area-row" data-depto="<?= $d['id_departamento'] ?>" style="display:none">
-                        <td colspan="<?= esAdmin() ? 3 : 2 ?>" class="text-muted" style="font-size:13px">Sin áreas registradas todavía.</td>
+                        <td colspan="<?= esAdmin() ? 3 : 2 ?>" class="text-muted" style="font-size:13px">Sin departamentos registrados todavía.</td>
                     </tr>
                     <?php endif; ?>
                     <?php foreach ($areasDelDepto as $a): ?>
@@ -232,10 +232,10 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                         <td><span class="badge-estado badge-proceso"><?= $a['total_equipos'] ?> equipos</span></td>
                         <?php if (esAdmin()): ?>
                         <td>
-                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar esta área?','danger')">
+                            <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar este departamento?','danger')">
                                 <input type="hidden" name="action"  value="eliminar_area">
                                 <input type="hidden" name="id_area" value="<?= $a['id_area'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar área"><span class="material-symbols-outlined mi-sm">delete</span></button>
+                                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Eliminar departamento"><span class="material-symbols-outlined mi-sm">delete</span></button>
                             </form>
                         </td>
                         <?php endif; ?>
@@ -256,9 +256,9 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
             </div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border-light)">
                 <div class="form-group" style="margin-bottom:0;min-width:180px">
-                    <label>Área</label>
+                    <label>Departamento</label>
                     <select onchange="ajaxFiltro('/pages/equipos.php?area='+this.value+'&estado=<?= urlencode($filtroEstado) ?>&orden=<?= urlencode($orden) ?>')">
-                        <option value="">Todas las áreas</option>
+                        <option value="">Todos los departamentos</option>
                         <?php $deptoActual = null; foreach ($areasSelect as $a): ?>
                             <?php if ($deptoActual !== $a['id_departamento']): if ($deptoActual !== null) echo '</optgroup>'; ?>
                                 <optgroup label="<?= e($a['nombre_departamento']) ?>">
@@ -297,7 +297,7 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                     <thead>
                         <tr>
                             <th>No. Inventario</th><th>Modelo / Marca</th><th>Especificaciones</th>
-                            <th>Área</th><th>Estado</th><th>Acciones</th>
+                            <th>Departamento</th><th>Estado</th><th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -352,51 +352,51 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
 
         <?php /* Los modales viven DENTRO de #ajaxFiltroZona a propósito: cada vez que se
         guarda/elimina algo, ui.js vuelve a pedir esta zona por fetch() y la reemplaza
-        completa, así los <select> de estos formularios (ej. el de Departamento en
-        "Nueva Área") siempre traen las opciones recién creadas. Si se sacan de aquí,
+        completa, así los <select> de estos formularios (ej. el de Área en
+        "Nuevo Departamento") siempre traen las opciones recién creadas. Si se sacan de aquí,
         quedan con los datos congelados del primer render de la página. */ ?>
         <?php if (esAdmin()): ?>
-        <!-- Modal: Nueva Área -->
+        <!-- Modal: Nuevo Departamento -->
 <div class="modal-overlay" id="modalNuevaArea">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Registrar Nueva Área</div>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">meeting_room</span> Registrar Nuevo Departamento</div>
             <button class="modal-close" onclick="closeModal('modalNuevaArea')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
             <?php if (empty($departamentos)): ?>
-                <p class="text-muted">Primero debes crear un <strong>Departamento</strong>. Cierra esta ventana y usa el botón «+ Nuevo Departamento».</p>
+                <p class="text-muted">Primero debes crear un <strong>Área</strong>. Cierra esta ventana y usa el botón «+ Nueva Área».</p>
             <?php else: ?>
             <form method="POST" action="/pages/equipos.php">
                 <input type="hidden" name="action" value="nueva_area">
                 <div class="form-group">
-                    <label>Departamento *</label>
+                    <label>Área *</label>
                     <select name="id_departamento" required>
                         <?php foreach ($departamentos as $d): ?>
                         <option value="<?= $d['id_departamento'] ?>"><?= e($d['nombre_departamento']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group"><label>Nombre del Área *</label><input type="text" name="nombre_area" placeholder="Ej: Sala de Cómputo A" required></div>
-                <button type="submit" class="btn btn-success btn-full">Guardar Área</button>
+                <div class="form-group"><label>Nombre del Departamento *</label><input type="text" name="nombre_area" placeholder="Ej: Sistemas" required></div>
+                <button type="submit" class="btn btn-success btn-full">Guardar Departamento</button>
             </form>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Modal: Nuevo Departamento -->
+<!-- Modal: Nueva Área -->
 <div class="modal-overlay" id="modalNuevoDepartamento">
     <div class="modal-box">
         <div class="modal-header">
-            <div class="modal-title"><span class="material-symbols-outlined mi-md">apartment</span> Registrar Nuevo Departamento</div>
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">apartment</span> Registrar Nueva Área</div>
             <button class="modal-close" onclick="closeModal('modalNuevoDepartamento')"><span class="material-symbols-outlined mi-sm">close</span></button>
         </div>
         <div class="modal-body">
             <form method="POST" action="/pages/equipos.php">
                 <input type="hidden" name="action" value="nuevo_departamento">
-                <div class="form-group"><label>Nombre del Departamento *</label><input type="text" name="nombre_departamento" placeholder="Ej: Sistemas" required></div>
-                <button type="submit" class="btn btn-success btn-full">Guardar Departamento</button>
+                <div class="form-group"><label>Nombre del Área *</label><input type="text" name="nombre_departamento" placeholder="Ej: Operaciones" required></div>
+                <button type="submit" class="btn btn-success btn-full">Guardar Área</button>
             </form>
         </div>
     </div>
@@ -425,7 +425,7 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Departamento</label>
+                        <label>Área</label>
                         <select id="nuevoEqDepto" onchange="pintarAreas(this.value, 'id_area')">
                             <option value="">Sin asignar</option>
                             <?php foreach ($departamentos as $d): ?>
@@ -434,8 +434,8 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Área</label>
-                        <select name="id_area" id="id_area"><option value="">Selecciona un departamento primero</option></select>
+                        <label>Departamento</label>
+                        <select name="id_area" id="id_area"><option value="">Selecciona un área primero</option></select>
                     </div>
                 </div>
                 <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" placeholder="Nombre de quien usa el equipo (no requiere cuenta en el sistema)"></div>
@@ -483,7 +483,7 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                 <div class="form-group"><label>Disco</label><input type="text" name="disco" id="editDisco"></div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Departamento</label>
+                        <label>Área</label>
                         <select id="editDepto" onchange="pintarAreas(this.value, 'editArea')">
                             <option value="">Sin asignar</option>
                             <?php foreach ($departamentos as $d): ?>
@@ -492,8 +492,8 @@ foreach ($areas as $a) { $areasPorDepto[$a['id_departamento']][] = $a; }
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Área</label>
-                        <select name="id_area" id="editArea"><option value="">Selecciona un departamento primero</option></select>
+                        <label>Departamento</label>
+                        <select name="id_area" id="editArea"><option value="">Selecciona un área primero</option></select>
                     </div>
                 </div>
                 <div class="form-group"><label>Usuario Dueño</label><input type="text" name="usuario_dueno" id="editDueno" placeholder="Nombre de quien usa el equipo"></div>
@@ -563,14 +563,14 @@ function toggleDepto(id) {
 document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
 });
-// Llena el <select> de Área (selectId) con las áreas del Departamento elegido (idDepto),
-// leyéndolas de las filas .area-row de la tabla de Departamentos/Áreas (siempre al día,
+// Llena el <select> de Departamento (selectId) con los departamentos del Área elegida (idDepto),
+// leyéndolas de las filas .area-row de la tabla de Áreas/Departamentos (siempre al día,
 // esa tabla vive dentro de #ajaxFiltroZona y se refresca tras cada guardado por AJAX).
 function pintarAreas(idDepto, selectId, seleccionar) {
     const sel = document.getElementById(selectId);
     sel.innerHTML = '';
     if (!idDepto) {
-        sel.appendChild(new Option('Selecciona un departamento primero', ''));
+        sel.appendChild(new Option('Selecciona un área primero', ''));
         return;
     }
     sel.appendChild(new Option('Sin asignar', ''));
@@ -592,7 +592,7 @@ function abrirDetalleEquipo(eq) {
         <p><strong>Modelo:</strong> ${esc(eq.modelo)} ${esc(eq.marca)}</p>
         <p><strong>Número de Serie:</strong> ${esc(eq.numero_serie) || '—'}</p>
         <p><strong>Especificaciones:</strong> ${esc(specs)}</p>
-        <p><strong>Área:</strong> ${esc(eq.nombre_area) || '—'}</p>
+        <p><strong>Departamento:</strong> ${esc(eq.nombre_area) || '—'}</p>
         <p><strong>Usuario Dueño:</strong> ${esc(eq.usuario_dueno) || '—'}</p>
         <p><strong>Estado:</strong> ${esc(eq.estado)}</p>
     `;
