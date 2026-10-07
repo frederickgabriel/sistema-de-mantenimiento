@@ -189,15 +189,22 @@ if ($esAdm) {
 <?php if (isset($_SESSION['usuario'])): ?>
 <!-- Asistente Zilara (motor local basado en reglas) -->
 <?php
-// Mascota por capas (antenas, cuerpo, ojos y patas) para animarla pieza por pieza — ver css/estilos.css
+// Mascota Zilara: imagen base (img/mascota_zilara.png, sin ojos ni puntos del globo) + un SVG encima con los
+// ojos y los puntos "escribiendo..." para animarlos aparte — ver css/estilos.css y js/asistente.js
 if (!function_exists('mascotaZilara')) {
     function mascotaZilara(string $extra = ''): string {
-        $patas = '';
-        for ($i = 0; $i < 8; $i++) $patas .= '<i class="m-capa m-pata" style="--i:' . $i . '"></i>';
         return '<span class="mascota ' . $extra . '" aria-hidden="true">'
-             . '<i class="m-capa m-ant m-ant-i"></i><i class="m-capa m-ant m-ant-d"></i>'
-             . '<span class="m-cabeza"><i class="m-capa m-cuerpo"></i><span class="m-ojos"><i class="m-ojo m-ojo-i"></i><i class="m-ojo m-ojo-d"></i></span></span>'
-             . $patas . '</span>';
+             . '<span class="mz-sombra"></span>'
+             . '<span class="mz-flota">'
+             . '<img class="mz-base" src="/img/mascota_zilara.png" alt="" draggable="false">'
+             . '<svg class="mz-svg" viewBox="0 0 1254 1254" focusable="false">'
+             . '<g class="mz-ojos"><g class="mz-mirada">'
+             . '<g class="mz-ojo"><rect class="mz-abierto" x="420" y="564" width="67" height="96" rx="33.5"/><path class="mz-feliz" d="M392 639A61.5 58 0 0 1 515 639"/></g>'
+             . '<g class="mz-ojo"><rect class="mz-abierto" x="669" y="564" width="67" height="96" rx="33.5"/><path class="mz-feliz" d="M641 639A61.5 58 0 0 1 763 639"/></g>'
+             . '</g></g>'
+             . '<g class="mz-puntos"><circle class="mz-punto" cx="935.5" cy="349.5" r="25"/><circle class="mz-punto" cx="1020.5" cy="349.5" r="25"/><circle class="mz-punto" cx="1104.5" cy="349.5" r="25"/></g>'
+             . '</svg>'
+             . '</span></span>';
     }
 }
 ?>
@@ -221,7 +228,7 @@ if (!function_exists('mascotaZilara')) {
         <button type="submit" class="chat-send" aria-label="Enviar"><span class="material-symbols-outlined">send</span></button>
     </form>
 </div>
-<script src="/js/asistente.js?v=4" defer></script>
+<script src="/js/asistente.js?v=6" defer></script>
 <?php endif; ?>
 
 <script src="/js/ui.js?v=9"></script>

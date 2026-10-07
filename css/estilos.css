@@ -1077,86 +1077,69 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
    ============================================ */
 .chat-fab {
     position: fixed; right: 24px; bottom: 24px; z-index: 900;
-    width: 52px; height: 62px; border: none; background: none; padding: 0; cursor: pointer;
+    width: 72px; height: 72px; border: none; background: none; padding: 0; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     -webkit-tap-highlight-color: transparent;
 }
-.chat-fab:active .mascota { transform: scale(.92); }
 
-/* ---- Mascota Zilara estilo pixel-art, animada por capas ----
-   Todas las capas usan la misma imagen (img/mascota_cuerpo.png, ojos borrados) recortada con clip-path;
-   los ojos son cuadros aparte para parpadear y mirar. Proporción 208:263.
-   Movimiento "a saltos" (steps) como un sprite: reposo con parpadeo y, cada pocos segundos, js/asistente.js
-   le pone una acción: .a-mira (gira y mira de lado), .a-camina (camina), .a-salta, .a-antena, .a-estira, .a-feliz */
+/* ---- Mascota Zilara (img/mascota_zilara.png + SVG con ojos y puntos), animada fluida ----
+   Capas: .mz-sombra (sombra en el piso), .mz-flota (flota y se inclina), .mz-base (imagen), .mz-svg (ojos y puntos).
+   Ojos: parpadean y miran (js/asistente.js les da --ox/--oy: siguen el cursor o miran alrededor).
+   Puntos del globo: onda de "escribiendo…". Hover: se agranda, se alegra y los puntos aceleran. */
 .mascota {
-    --mw: 44px; --px: calc(var(--mw) * .035);
-    position: relative; display: block; width: var(--mw); aspect-ratio: 208 / 263;
-    pointer-events: none; user-select: none; transform-origin: 50% 100%;
-    filter: drop-shadow(0 6px 10px rgba(20,20,40,.28));
-    animation: mBob 2.6s steps(1, end) infinite;
+    --mw: 68px; --ox: 0; --oy: 0;
+    position: relative; display: block; width: var(--mw); aspect-ratio: 1; pointer-events: none; user-select: none;
+    transform: rotate(calc(var(--ox) * 2.5deg));
+    transition: transform .7s cubic-bezier(.22,.8,.3,1);
 }
-.m-capa { position: absolute; inset: 0; background: url(/img/mascota_cuerpo.png) center / 100% 100% no-repeat; image-rendering: auto; }
-.m-cabeza { position: absolute; inset: 0; }
-.m-cuerpo { clip-path: inset(16.7% 0 24.3% 0); }
-.m-ant-i { clip-path: inset(0 68% 82.6% 6%); transform-origin: 19% 16.7%; animation: mAntTic 5.2s steps(1, end) infinite; }
-.m-ant-d { clip-path: inset(0 6% 82.6% 68%); transform-origin: 83% 16.7%; animation: mAntTic 6.1s steps(1, end) 1.3s infinite reverse; }
-.m-pata { clip-path: inset(74% calc(100% - (var(--i) + 1) * 12.5%) 0 calc(var(--i) * 12.5%)); transform-origin: 50% 74%; }
-.m-ojos { position: absolute; inset: 0; animation: mMirar 8s steps(1, end) infinite; }
-.m-ojo { position: absolute; top: 32.3%; width: 12.2%; height: 10%; background: #071f3f; transform-origin: 50% 50%; animation: mParpadeo 4.4s steps(1, end) infinite; }
-.m-ojo-i { left: 13%; }
-.m-ojo-d { left: 75%; }
+.mz-flota { position: absolute; inset: 0; display: block; transform-origin: 50% 85%; animation: mzFlota 4s ease-in-out infinite; will-change: transform; }
+.mz-base { display: block; width: 100%; height: 100%; filter: drop-shadow(0 5px 9px rgba(40,30,120,.28)); transition: filter .5s ease; }
+.mz-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mz-sombra { position: absolute; left: 24%; right: 24%; bottom: 1%; height: 6%; border-radius: 50%; background: rgba(20,20,60,.28); filter: blur(3px); animation: mzSombra 4s ease-in-out infinite; }
 
-/* Reposo */
-@keyframes mBob      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--px) * -1)); } }
-@keyframes mAntTic   { 0%,86%,100% { transform: rotate(0); } 88% { transform: rotate(-9deg); } 92% { transform: rotate(7deg); } 96% { transform: rotate(-3deg); } }
-@keyframes mParpadeo { 0%,92%,100% { transform: scaleY(1); } 94% { transform: scaleY(.12); } 97% { transform: scaleY(1); } }
-@keyframes mMirar    { 0%,30%,100% { transform: translate(0,0); } 34%,44% { transform: translate(-7%,0); } 48%,70% { transform: translate(0,0); } 74%,84% { transform: translate(7%,0); } 88% { transform: translate(0,0); } }
+.mz-mirada { transform: translate(calc(var(--ox) * 26px), calc(var(--oy) * 18px)); transition: transform .28s cubic-bezier(.2,.8,.3,1); }
+.mz-ojo { transform-box: fill-box; transform-origin: 50% 55%; transition: transform .12s ease-in; }
+.mz-abierto { fill: #fff; transform-box: fill-box; transform-origin: 50% 50%; transition: transform .35s cubic-bezier(.3,.8,.3,1), opacity .3s ease; }
+.mz-feliz { fill: none; stroke: #fff; stroke-width: 28; stroke-linecap: round; opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; transform: scale(.7); transition: transform .4s cubic-bezier(.3,.9,.3,1), opacity .3s ease; }
+.mascota.parpadea .mz-ojo { transform: scaleY(.07); }          /* parpadeo: cierra y vuelve a abrir (js/asistente.js) */
+.mascota.parpadea .mz-ojo { transition-duration: .09s; }
+.mz-punto { fill: #fff; transform-box: fill-box; transform-origin: 50% 50%; animation: mzOnda 1.4s ease-in-out infinite; }
+.mz-punto:nth-child(2) { animation-delay: .18s; }
+.mz-punto:nth-child(3) { animation-delay: .36s; }
 
-/* Acciones (una a la vez; las pone/quita js/asistente.js) */
-@keyframes mAMira {   /* mira de lado: se corre un pasito hacia donde mira y vuelve (sin aplastarse) */
-    0%,100% { transform: translateX(0); } 12%,78% { transform: translateX(calc(var(--px) * -2)); } 90% { transform: translateX(calc(var(--px) * -1)); } }
-@keyframes mAOjosLado { 0%,8% { transform: translate(0,0); } 12%,80% { transform: translate(-8%,0); } 90%,100% { transform: translate(0,0); } }
-@keyframes mACamina { /* camina de lado hacia la izquierda y regresa */
-    0% { transform: translateX(0); } 7% { transform: translateX(calc(var(--px) * -1)); } 14% { transform: translateX(calc(var(--px) * -2)); }
-    21% { transform: translateX(calc(var(--px) * -3)); } 28% { transform: translateX(calc(var(--px) * -4)); } 35% { transform: translateX(calc(var(--px) * -5)); }
-    42% { transform: translateX(calc(var(--px) * -6)); } 52% { transform: translateX(calc(var(--px) * -6)); }
-    60% { transform: translateX(calc(var(--px) * -5)); } 67% { transform: translateX(calc(var(--px) * -4)); } 74% { transform: translateX(calc(var(--px) * -3)); }
-    81% { transform: translateX(calc(var(--px) * -2)); } 88% { transform: translateX(calc(var(--px) * -1)); } 95%,100% { transform: translateX(0); } }
-@keyframes mAOjosCamina { 0%,3% { transform: translate(0,0); } 6%,46% { transform: translate(-8%,0); } 50%,54% { transform: translate(0,0); } 56%,94% { transform: translate(8%,0); } 97%,100% { transform: translate(0,0); } }
-@keyframes mPasoA { 0%,100% { transform: translateY(0); } 50% { transform: translateY(calc(var(--px) * -1.4)); } }
-@keyframes mPasoB { 0%,100% { transform: translateY(calc(var(--px) * -1.4)); } 50% { transform: translateY(0); } }
-@keyframes mASalta { 0%,100% { transform: translateY(0) scale(1,1); } 15% { transform: translateY(0) scale(1.08,.9); } 35% { transform: translateY(calc(var(--px) * -4)) scale(.96,1.06); }
-    55% { transform: translateY(calc(var(--px) * -5)) scale(.96,1.06); } 75% { transform: translateY(0) scale(1.08,.9); } 90% { transform: translateY(0) scale(1,1); } }
-@keyframes mAAntena { 0%,100% { transform: rotate(0); } 15% { transform: rotate(-22deg); } 30% { transform: rotate(14deg); } 45% { transform: rotate(-18deg); } 60% { transform: rotate(10deg); } 75% { transform: rotate(-8deg); } }
-@keyframes mAEstira { 0%,100% { transform: scale(1,1); } 20%,70% { transform: scale(.94,1.14); } 85% { transform: scale(1.06,.94); } }
-@keyframes mAFeliz  { 0%,100% { transform: translateY(0) scale(1,1); } 12% { transform: scale(1.1,.88); } 30% { transform: translateY(calc(var(--px) * -6)) scale(.94,1.1) rotate(-5deg); }
-    50% { transform: scale(1.1,.88); } 68% { transform: translateY(calc(var(--px) * -4)) rotate(5deg); } 84% { transform: scale(1.04,.96); } }
-@keyframes mAFelizOjos { 0%,100% { transform: scaleY(1); } 20%,80% { transform: scaleY(.4); } }
+@keyframes mzFlota   { 0%,100% { transform: translateY(0) rotate(-1.2deg); } 50% { transform: translateY(-9%) rotate(1.2deg); } }
+@keyframes mzSombra  { 0%,100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.78); opacity: .5; } }
+@keyframes mzOnda    { 0%,60%,100% { transform: translateY(0) scale(1); opacity: .55; } 30% { transform: translateY(-26px) scale(1.18); opacity: 1; } }
 
-.mascota.a-mira   { animation: mAMira 2.4s steps(1, end) 1; }
-.mascota.a-mira .m-ojos { animation: mAOjosLado 2.4s steps(1, end) 1; }
-.mascota.a-camina { animation: mACamina 3.2s steps(1, end) 1; }
-.mascota.a-camina .m-ojos { animation: mAOjosCamina 3.2s steps(1, end) 1; }
-.mascota.a-camina .m-pata:nth-child(even) { animation: mPasoA .4s steps(1, end) 8; }
-.mascota.a-camina .m-pata:nth-child(odd)  { animation: mPasoB .4s steps(1, end) 8; }
-.mascota.a-salta  { animation: mASalta 1s steps(1, end) 1; }
-.mascota.a-antena .m-ant-i, .mascota.a-antena .m-ant-d { animation: mAAntena .9s steps(1, end) 2; }
-.mascota.a-estira { animation: mAEstira 1.3s steps(1, end) 1; }
-.mascota.a-feliz  { animation: mAFeliz 1.2s steps(1, end) 1; }
-.mascota.a-feliz .m-ojo { animation: mAFelizOjos 1.2s steps(1, end) 1; }
-.chat-fab.abierto .mascota { animation: mBob 2.2s steps(1, end) infinite; }
+/* Hover / acciones: respuesta suave, sin rebotes ni cambios bruscos de velocidad */
+.chat-fab:hover .mascota { transform: translateY(-3px) scale(1.06) rotate(calc(var(--ox) * 2.5deg)); transition-duration: .55s; }
+.chat-fab:hover .mz-base { filter: drop-shadow(0 7px 14px rgba(124,58,237,.42)); }
+.chat-fab:hover .mz-abierto { opacity: 0; transform: scaleY(.25); }
+.chat-fab:hover .mz-feliz { opacity: 1; transform: scale(1); }
+.chat-fab:hover .mz-punto { animation-duration: 1s; }
+.chat-fab:active .mascota { transform: scale(.97); transition-duration: .15s; }
+@keyframes mzFeliz { 0%,100% { transform: translateY(0) scale(1,1); } 20% { transform: translateY(0) scale(1.1,.9); } 45% { transform: translateY(-16%) scale(.95,1.08) rotate(-5deg); } 70% { transform: translateY(0) scale(1.08,.92); } }
+.mascota.a-feliz .mz-flota { animation: mzFeliz 1s cubic-bezier(.3,.7,.3,1) 1; }
+.mascota.a-feliz .mz-abierto { opacity: 0; transform: scaleY(.25); }
+.mascota.a-feliz .mz-feliz { opacity: 1; transform: scale(1); }
+.chat-fab.abierto .mz-punto { animation-duration: 1s; }
+@media (prefers-reduced-motion: reduce) {
+    .mz-flota, .mz-sombra, .mz-punto { animation: none; }
+    .chat-fab:hover .mascota { transform: none; }
+}
 
-/* Versión pequeña (encabezado del chat): solo reposo */
-.mascota-mini { --mw: 27px; filter: none; }
+/* Versión pequeña (encabezado del chat) */
+.mascota-mini { --mw: 38px; }
+.mascota-mini .mz-sombra { display: none; }
 .chat-fab-dot {
-    position: absolute; top: 42px; right: -3px; width: 12px; height: 12px; border-radius: 50%;
+    position: absolute; top: 10px; right: 6px; width: 12px; height: 12px; border-radius: 50%;
     background: var(--danger); border: 2px solid var(--bg-main);
     animation: chatPulse 2s ease-in-out infinite;
 }
 @keyframes chatPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
 
 .chat-panel {
-    position: fixed; right: 24px; bottom: 96px; z-index: 900;
+    position: fixed; right: 24px; bottom: 106px; z-index: 900;
     width: 380px; max-width: calc(100vw - 32px);
     height: min(600px, calc(100vh - 140px));
     background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);

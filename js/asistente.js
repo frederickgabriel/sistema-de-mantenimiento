@@ -132,39 +132,51 @@
         renderChips(DEFAULT_CHIPS);
     }
 
-    // Mascota pixel-art: en reposo parpadea y mira; cada pocos segundos hace una acción distinta
-    // (gira y mira de lado, camina, salta, mueve las antenas, se estira). Las clases .a-* están en css/estilos.css
+    // Mascota: los ojos siguen el cursor (si se movió hace poco) o miran alrededor por su cuenta;
+    // flotar, parpadear, la onda de los puntos y el hover son CSS (css/estilos.css, bloque "Mascota Zilara").
     const mascota = fab.querySelector('.mascota');
-    const ACCIONES = [
-        { clase: 'a-mira',   ms: 2400 },
-        { clase: 'a-camina', ms: 3200 },
-        { clase: 'a-salta',  ms: 1000 },
-        { clase: 'a-antena', ms: 1800 },
-        { clase: 'a-estira', ms: 1300 },
-    ];
-    let accionActual = null, accionTimer, ultima = -1;
+    let accionTimer;
     function lanzarAccion(clase, ms) {
         if (!mascota) return;
         clearTimeout(accionTimer);
-        if (accionActual) mascota.classList.remove(accionActual);
+        mascota.classList.remove(clase);
         void mascota.offsetWidth; // reinicia la animación
-        accionActual = clase;
         mascota.classList.add(clase);
-        accionTimer = setTimeout(() => { mascota.classList.remove(clase); accionActual = null; }, ms);
+        accionTimer = setTimeout(() => mascota.classList.remove(clase), ms);
     }
-    function accionAlAzar() {
-        let i;
-        do { i = Math.floor(Math.random() * ACCIONES.length); } while (i === ultima);
-        ultima = i;
-        lanzarAccion(ACCIONES[i].clase, ACCIONES[i].ms);
+    // Parpadeo natural: cada 2.5–6 s cierra y abre los ojos; a veces parpadea dos veces seguidas
+    function parpadear(veces) {
+        mascota.classList.add('parpadea');
+        setTimeout(() => {
+            mascota.classList.remove('parpadea');
+            if (veces > 1) setTimeout(() => parpadear(veces - 1), 140);
+        }, 130);
     }
     (function ciclo() {
         setTimeout(() => {
-            if (!panel.classList.contains('open') && !document.hidden && !accionActual) accionAlAzar();
+            if (mascota && !document.hidden) parpadear(Math.random() < 0.25 ? 2 : 1);
             ciclo();
-        }, 4000 + Math.random() * 5000);
+        }, 2500 + Math.random() * 3500);
     })();
-    fab.addEventListener('mouseenter', () => { if (!panel.classList.contains('open')) lanzarAccion('a-salta', 1000); });
+    if (mascota) {
+        const reducir = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let ultimoMov = 0, esperaAzar = 0;
+        const mirar = (x, y) => { mascota.style.setProperty('--ox', x.toFixed(2)); mascota.style.setProperty('--oy', y.toFixed(2)); };
+        if (!reducir) {
+            document.addEventListener('pointermove', (e) => {
+                const r = fab.getBoundingClientRect();
+                const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+                const d = Math.hypot(dx, dy) || 1, f = Math.min(1, d / 260); // cerca del cursor mira más fuerte
+                mirar((dx / d) * f, (dy / d) * f);
+                ultimoMov = performance.now();
+            }, { passive: true });
+            setInterval(() => { // sin cursor cerca: mira alrededor de vez en cuando
+                if (document.hidden || performance.now() - ultimoMov < 3500 || --esperaAzar > 0) return;
+                esperaAzar = 1 + Math.floor(Math.random() * 3);
+                mirar(Math.random() * 2 - 1, (Math.random() * 2 - 1) * .6);
+            }, 1400);
+        }
+    }
 
     function openPanel() {
         fab.classList.add('abierto');

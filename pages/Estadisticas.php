@@ -98,7 +98,7 @@ $chartData = json_encode([
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Estadísticas — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=27">
+    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=29">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .section-sep {
