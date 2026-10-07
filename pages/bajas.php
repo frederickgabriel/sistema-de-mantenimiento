@@ -4,6 +4,7 @@
 // Archivo: pages/bajas.php
 // =============================================
 require_once '../includes/config.php';
+require_once '../includes/formato_bajas.php';
 requireAdmin();
 
 $db  = getDB();
@@ -403,6 +404,7 @@ if ($verPdf) {
             <div class="modal-title"><span class="material-symbols-outlined mi-md">table_view</span> Formato de Baja</div>
             <button class="modal-close" onclick="closeModal('modalFormato')"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px">close</span></button>
         </div>
+        <?php $firmasGuardadas = fbFirmasGuardadas(); ?>
         <div class="modal-body">
             <form method="GET" action="/pages/formato_baja.php" id="formFormato">
                 <div id="formatoIds"></div>
@@ -450,6 +452,29 @@ if ($verPdf) {
                     <label>Observaciones adicionales</label>
                     <input type="text" name="observaciones" maxlength="150" placeholder="Opcional">
                 </div>
+
+                <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);margin:4px 0 10px">Firmas</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Solicitado por (<?= e(FB_FIRMAS['solicita']['cargo']) ?>)</label>
+                        <input type="text" name="firma_solicita" maxlength="60" value="<?= e($firmasGuardadas['solicita']) ?>" placeholder="Nombre">
+                    </div>
+                    <div class="form-group">
+                        <label>Verificado costos (<?= e(FB_FIRMAS['costos']['cargo']) ?>)</label>
+                        <input type="text" name="firma_costos" maxlength="60" value="<?= e($firmasGuardadas['costos']) ?>" placeholder="Nombre">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Autoriza (<?= e(FB_FIRMAS['finanzas']['cargo']) ?>)</label>
+                        <input type="text" name="firma_finanzas" maxlength="60" value="<?= e($firmasGuardadas['finanzas']) ?>" placeholder="Nombre">
+                    </div>
+                    <div class="form-group">
+                        <label>Autoriza (<?= e(FB_FIRMAS['gerente']['cargo']) ?>)</label>
+                        <input type="text" name="firma_gerente" maxlength="60" value="<?= e($firmasGuardadas['gerente']) ?>" placeholder="Nombre">
+                    </div>
+                </div>
+                <label style="display:flex;gap:8px;align-items:center;font-weight:400;text-transform:none;letter-spacing:0;margin:0 0 14px;font-size:13px;cursor:pointer"><input type="checkbox" name="guardar_firmas" value="1" style="width:auto;padding:0;margin:0"> Dejar estos nombres por defecto para los próximos formatos</label>
 
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
                     <button type="submit" class="btn btn-primary" style="flex:1"><span class="material-symbols-outlined mi-sm">print</span> Ver / Imprimir</button>

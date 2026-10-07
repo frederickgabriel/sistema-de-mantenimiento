@@ -25,7 +25,7 @@ $qs = fbQuery($p);
 function fbContable(float $n): string {
     return '<span class="acct"><span>$</span><span>' . ($n ? number_format($n, 2) : '-&nbsp;&nbsp;&nbsp;') . '</span></span>';
 }
-$f = FB_FIRMAS;
+$f = $p['firmas'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -174,11 +174,11 @@ $f = FB_FIRMAS;
                 <td rowspan="2" class="g br2 c wrap">SELLO DE RETORNO FORMATO COSTOS</td>
             </tr>
             <tr style="height:13.5px">
-                <td colspan="2" class="g bl2 br2 c"><?= $f['solicita']['nombre'] ?></td>
-                <td class="g c"><?= $f['costos']['nombre'] ?></td>
-                <td class="g c"><?= $f['seguridad']['nombre'] ?></td>
-                <td class="g c"><?= $f['finanzas']['nombre'] ?></td>
-                <td class="g c"><?= $f['gerente']['nombre'] ?></td>
+                <td colspan="2" class="g bl2 br2 c"><?= e($f['solicita']['nombre']) ?></td>
+                <td class="g c"><?= e($f['costos']['nombre']) ?></td>
+                <td class="g c"><?= e($f['seguridad']['nombre']) ?></td>
+                <td class="g c"><?= e($f['finanzas']['nombre']) ?></td>
+                <td class="g c"><?= e($f['gerente']['nombre']) ?></td>
             </tr>
             <tr style="height:71px">
                 <td colspan="2" class="g bl2 br2"></td>

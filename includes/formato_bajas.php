@@ -7,8 +7,8 @@
 //
 // El Excel se genera rellenando la plantilla original includes/plantillas/formato_bajas.xlsx
 // (con ZipArchive, sin Composer), así conserva exactamente logo, bordes, firmas y
-// área de impresión. Para cambiar nombres de firmas o textos fijos basta con
-// reemplazar esa plantilla (y ajustar FB_FIRMAS para la vista imprimible).
+// área de impresión. Los nombres de las firmas se capturan en el modal del formato
+// (FB_FIRMAS da los valores por defecto); los demás textos fijos salen de la plantilla.
 // =============================================
 
 const FB_PLANTILLA     = __DIR__ . '/plantillas/formato_bajas.xlsx';
@@ -17,7 +17,10 @@ const FB_RENGLONES_BASE = 28;   // la plantilla trae las filas 17..44; el Excel 
 
 const FB_EMPRESA = ['Hyatt Zilara Riviera Maya', 'Hotel CAPRI Caribe S de RL de CV.'];
 
-// Mismos nombres que trae la plantilla .xlsx (filas 47 y 49)
+// Firmas: nombres predeterminados de origen. Los de FB_FIRMAS_EDITABLES se capturan en el modal
+// (parámetros firma_<clave>) y, si se marca "Dejar por defecto", se guardan en FB_FIRMAS_ARCHIVO
+// y pasan a ser los predeterminados de todos los formatos hasta que se guarden otros.
+const FB_FIRMAS_ARCHIVO = __DIR__ . '/formato_bajas_firmas.json';
 const FB_FIRMAS = [
     'solicita'  => ['titulo' => 'SOLICITADO POR',    'nombre' => 'ALEJANDRO MATHEIS', 'cargo' => 'JEFE DEPARTAMENTO'],
     'costos'    => ['titulo' => 'VERIFICADO COSTOS', 'nombre' => 'OSCAR VERDUZCO',    'cargo' => 'CONTRALOR DE COSTOS'],
@@ -25,6 +28,7 @@ const FB_FIRMAS = [
     'finanzas'  => ['titulo' => 'AUTORIZA',          'nombre' => 'CLAUDIA BAUTISTA',  'cargo' => 'SUBCONT. FINANZAS'],
     'gerente'   => ['titulo' => 'AUTORIZA',          'nombre' => 'XAVIER MANTECON',   'cargo' => 'GERENTE GENERAL'],
 ];
+const FB_FIRMAS_EDITABLES = ['solicita', 'costos', 'finanzas', 'gerente'];
 
 const FB_NOTAS = [
     '* SE DEBERAN ANEXAR LAS FOTOS DE SOPORTE PARA LA VERIFICACION FISICA.',
@@ -32,6 +36,17 @@ const FB_NOTAS = [
     '*UNA VEZ FIRMADO EL FORMATO REGRESAR EL ORIGINAL A COSTOS Y DEPARTAMENTO SOLICITADO SE QUEDA CON COPIA.',
     '*DEFINIR EL USO FINAL DE LOS ACTIVOS QUE SE DARAN DE BAJA (DONACION, VENTA, RECICLAJE, ETC.)',
 ];
+
+/** Nombres de firmas predeterminados (los guardados, o los de origen): [clave => nombre]. */
+function fbFirmasGuardadas(): array {
+    $json = is_file(FB_FIRMAS_ARCHIVO) ? json_decode((string)file_get_contents(FB_FIRMAS_ARCHIVO), true) : null;
+    $out = [];
+    foreach (FB_FIRMAS_EDITABLES as $c) {
+        $v = is_array($json) ? trim((string)($json[$c] ?? '')) : '';
+        $out[$c] = $v !== '' ? $v : FB_FIRMAS[$c]['nombre'];
+    }
+    return $out;
+}
 
 /** Lee los datos de encabezado del formato desde la query string (con valores por defecto). */
 function fbParametros(): array {
@@ -49,6 +64,19 @@ function fbParametros(): array {
     $tipo = $_GET['tipo'] ?? 'activos';
     if (!in_array($tipo, ['activos', 'operacion', ''], true)) $tipo = 'activos';
 
+    $firmas = FB_FIRMAS;
+    $guardadas = fbFirmasGuardadas();
+    foreach (FB_FIRMAS_EDITABLES as $clave) {
+        $nombre = mb_strtoupper(trim($_GET['firma_' . $clave] ?? '')) ?: $guardadas[$clave];
+        $firmas[$clave]['nombre'] = mb_substr($nombre, 0, 60);
+    }
+    if (!empty($_GET['guardar_firmas'])) {
+        @file_put_contents(FB_FIRMAS_ARCHIVO, json_encode(
+            array_map(fn($c) => $firmas[$c]['nombre'], array_combine(FB_FIRMAS_EDITABLES, FB_FIRMAS_EDITABLES)),
+            JSON_UNESCAPED_UNICODE
+        ), LOCK_EX);
+    }
+
     return [
         'ids'                => $ids,
         'tipo'               => $tipo,
@@ -57,6 +85,7 @@ function fbParametros(): array {
         'depto'              => mb_strtoupper(trim($_GET['depto'] ?? '') ?: 'SISTEMAS'),
         'ubicacion'          => mb_strtoupper(trim($_GET['ubicacion'] ?? '') ?: 'STAFF'),
         'observaciones'      => trim($_GET['observaciones'] ?? ''),
+        'firmas'             => $firmas,
     ];
 }
 
@@ -70,7 +99,10 @@ function fbQuery(array $p): string {
         'depto'              => $p['depto'],
         'ubicacion'          => $p['ubicacion'],
         'observaciones'      => $p['observaciones'],
-    ]);
+    ] + array_combine(
+        array_map(fn($c) => 'firma_' . $c, FB_FIRMAS_EDITABLES),
+        array_map(fn($c) => $p['firmas'][$c]['nombre'], FB_FIRMAS_EDITABLES)
+    ));
 }
 
 /** Convierte las bajas seleccionadas en los renglones del formato. */
@@ -207,6 +239,7 @@ function fbGenerarXlsx(array $p, array $renglones): string {
     [$hoja, $delta] = fbAjustarFilas($zip->getFromName('xl/worksheets/sheet1.xml'), $n);
     $filaTotal = FB_PRIMER_RENGLON + FB_RENGLONES_BASE + $delta; // fila de "TOTAL $"
     $filaObs   = 50 + $delta;                                    // "Observaciones adicionales"
+    $filaFirma = 47 + $delta;                                    // nombres de las firmas
 
     // Tipo de baja marcado con X
     if ($p['tipo'] === 'activos')   $hoja = fbCelda($hoja, 'A9', '( X )  BAJA DE ACTIVOS');
@@ -234,6 +267,13 @@ function fbGenerarXlsx(array $p, array $renglones): string {
     }
     $ultima = FB_PRIMER_RENGLON + $n - 1;
     $hoja = fbCelda($hoja, "E{$filaTotal}", ['f' => 'SUM(E' . FB_PRIMER_RENGLON . ":E{$ultima})", 'v' => $total]);
+
+    // Nombres de las firmas (la plantilla sangra con espacios los de A y C)
+    $firmas = $p['firmas'];
+    $hoja = fbCelda($hoja, "A{$filaFirma}", $firmas['solicita']['nombre'] !== '' ? '       ' . $firmas['solicita']['nombre'] : null);
+    $hoja = fbCelda($hoja, "C{$filaFirma}", $firmas['costos']['nombre'] !== '' ? '       ' . $firmas['costos']['nombre'] : null);
+    $hoja = fbCelda($hoja, "D{$filaFirma}", $firmas['finanzas']['nombre']);
+    $hoja = fbCelda($hoja, "E{$filaFirma}", $firmas['gerente']['nombre']);
 
     // Observaciones adicionales
     $hoja = fbCelda($hoja, "C{$filaObs}", $p['observaciones'] !== '' ? mb_strtoupper($p['observaciones']) : null);
