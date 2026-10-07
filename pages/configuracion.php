@@ -183,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $db->prepare("INSERT INTO SolicitudesRol (id_usuario, justificacion, token) VALUES (?,?,?)")
                        ->execute([$usuario['id_usuario'], $justificacion, $token]);
                     $idSolicitud = (int)$db->lastInsertId();
+                    notificarAdmins('Nueva solicitud de rol', $usuario['nombre'] . ' solicita ser Administrador.', '/pages/admin_roles.php', 'admin_panel_settings');
 
                     $enviado = enviarEmailSolicitudRol($usuario['nombre'], $usuario['cargo'], $usuario['correo'], $justificacion, $idSolicitud, $token);
 

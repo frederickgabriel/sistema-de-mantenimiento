@@ -69,6 +69,37 @@
 const cargarZona = (function () {
     const ZONA_ID = 'ajaxFiltroZona';
 
+    // ---- Animación del refresco en tiempo real: la zona aparece suave, lo nuevo o modificado
+    // destella un instante y una burbuja "Actualizado" sube desde abajo. ----
+    const ITEMS = 'tbody tr, [class*="card"]:not(:has([class*="card"]))';
+    function textosDeItems(zona) {
+        const set = new Map();
+        try {
+            zona.querySelectorAll(ITEMS).forEach((el) => {
+                const t = el.textContent.replace(/\s+/g, ' ').trim();
+                if (t) set.set(t, (set.get(t) || 0) + 1);
+            });
+        } catch (e) { return null; }
+        return set;
+    }
+    function animarActualizacion(zona, previos) {
+        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        zona.classList.add('z-refresco');
+        if (previos) {
+            const vistos = new Map();
+            try {
+                zona.querySelectorAll(ITEMS).forEach((el) => {
+                    const t = el.textContent.replace(/\s+/g, ' ').trim();
+                    if (!t) return;
+                    vistos.set(t, (vistos.get(t) || 0) + 1);
+                    if (vistos.get(t) > (previos.get(t) || 0)) el.classList.add('z-nuevo');
+                });
+            } catch (e) { /* sin :has() simplemente no se resalta */ }
+        }
+        setTimeout(() => zona.classList.remove('z-refresco'), 600);
+        window.zBurbujaActualizado();
+    }
+
     function cargarZona(url, pushState, silencioso) {
         const actual = document.getElementById(ZONA_ID);
         if (!actual) { if (!silencioso) location.href = url; return Promise.resolve(false); }
@@ -79,7 +110,9 @@ const cargarZona = (function () {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const nueva = doc.getElementById(ZONA_ID);
                 if (!nueva) throw new Error('sin zona');
+                const previos = silencioso ? textosDeItems(document.getElementById(ZONA_ID)) : null;
                 document.getElementById(ZONA_ID).replaceWith(nueva);
+                if (silencioso) animarActualizacion(nueva, previos);
                 if (doc.title) document.title = doc.title;
                 if (pushState) history.pushState({ ajaxFiltro: true }, '', url);
                 return true;
@@ -348,6 +381,7 @@ const cargarZona = (function () {
                     pendiente = false;
                     // Dashboard y estadísticas dibujan sus gráficas con scripts propios: se recargan completas
                     if (!document.getElementById('ajaxFiltroZona') && /\/(dashboard|estadisticas)\.php$/i.test(location.pathname)) {
+                        try { sessionStorage.setItem('zActualizado', '1'); } catch (e) {}
                         location.reload();
                         return;
                     }
@@ -362,4 +396,49 @@ const cargarZona = (function () {
     setInterval(ciclo, CADA_MS);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) ciclo(); });
     ciclo();
+})();
+
+
+// Estilos y burbuja de la animación de "datos actualizados" (tiempo real)
+(function () {
+    const css = document.createElement('style');
+    css.textContent = `
+    @keyframes z-entra{from{opacity:.55;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .z-refresco{animation:z-entra .45s cubic-bezier(.2,.8,.3,1)}
+    @keyframes z-destello{0%{box-shadow:0 0 0 0 var(--accent-glow,rgba(91,33,182,.25));background-color:var(--accent-glow,rgba(91,33,182,.12))}60%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent;background-color:transparent}}
+    .z-nuevo{animation:z-destello 1.6s ease-out}
+    .z-burbuja{position:fixed;left:50%;bottom:26px;z-index:2200;display:flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;border-radius:999px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;box-shadow:0 8px 26px rgba(0,0,0,.28);pointer-events:none;opacity:0;transform:translate(-50%,24px) scale(.6);transition:transform .45s cubic-bezier(.34,1.56,.64,1),opacity .25s ease}
+    .z-burbuja.in{opacity:1;transform:translate(-50%,0) scale(1)}
+    .z-burbuja.out{opacity:0;transform:translate(-50%,-10px) scale(.9);transition:transform .3s ease,opacity .3s ease}
+    .z-burbuja .material-symbols-outlined{font-size:18px;animation:z-gira 1s ease}
+    @keyframes z-gira{from{transform:rotate(-180deg)}to{transform:none}}
+    @media (prefers-reduced-motion:reduce){.z-refresco,.z-nuevo{animation:none}.z-burbuja{transition:opacity .2s}}
+    @media print{.z-burbuja{display:none!important}}`;
+    document.head.appendChild(css);
+
+    let activa = null, temporizador = null;
+    window.zBurbujaActualizado = function () {
+        if (!activa) {
+            activa = document.createElement('div');
+            activa.className = 'z-burbuja';
+            activa.innerHTML = '<span class="material-symbols-outlined">sync</span> Datos actualizados';
+            document.body.appendChild(activa);
+            requestAnimationFrame(() => requestAnimationFrame(() => activa && activa.classList.add('in')));
+        }
+        clearTimeout(temporizador);
+        temporizador = setTimeout(() => {
+            const b = activa; activa = null;
+            if (!b) return;
+            b.classList.remove('in'); b.classList.add('out');
+            setTimeout(() => b.remove(), 350);
+        }, 1800);
+    };
+
+    // Tras una recarga completa por tiempo real (dashboard / estadísticas) también se muestra la burbuja
+    try {
+        if (sessionStorage.getItem('zActualizado') === '1') {
+            sessionStorage.removeItem('zActualizado');
+            window.addEventListener('load', () => setTimeout(window.zBurbujaActualizado, 300));
+        }
+    } catch (e) {}
 })();

@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Actualizar solicitud
             $db->prepare("UPDATE SolicitudesRol SET estado='Aprobada', respuesta=?, fecha_respuesta=NOW() WHERE id_solicitud=?")
                ->execute([$respuesta ?: 'Solicitud aprobada.', $idSolicitud]);
+            notificar((int)$sol['id_usuario'], 'Solicitud aprobada', 'Ahora tienes el rol de Administrador.', '/pages/configuracion.php', 'verified_user');
             $msg = '✅ Rol de Administrador otorgado correctamente.';
         }
     }
@@ -40,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'rechazar' && $idSolicitud) {
         $db->prepare("UPDATE SolicitudesRol SET estado='Rechazada', respuesta=?, fecha_respuesta=NOW() WHERE id_solicitud=?")
            ->execute([$respuesta ?: 'Solicitud rechazada.', $idSolicitud]);
+        $solRech = $db->prepare("SELECT id_usuario FROM SolicitudesRol WHERE id_solicitud=?");
+        $solRech->execute([$idSolicitud]);
+        notificar((int)$solRech->fetchColumn(), 'Solicitud rechazada', $respuesta ?: 'Tu solicitud de rol Administrador fue rechazada.', '/pages/configuracion.php', 'block');
         $msg = '🚫 Solicitud rechazada.';
     }
 

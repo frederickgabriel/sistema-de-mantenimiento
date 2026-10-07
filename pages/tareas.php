@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombre=trim($_POST['nombre_tarea']??''); $desc=trim($_POST['descripcion']??''); $inv=trim($_POST['numero_inventario']??'')?:null; $fecha=$_POST['fecha_programada']?:null; $prior=$_POST['prioridad']??'Media';
         // Un usuario normal solo puede crear tareas asignadas a sí mismo; solo el admin elige a quién asignar.
         $asig = $esAdm ? ($_POST['id_usuario_asignado']?:null) : $miId;
-        if ($nombre) { $db->prepare("INSERT INTO Tareas (nombre_tarea,descripcion,numero_inventario,fecha_programada,prioridad,id_usuario_asignado) VALUES (?,?,?,?,?,?)")->execute([$nombre,$desc,$inv,$fecha,$prior,$asig]); $msg="✅ Tarea «{$nombre}» registrada."; }
+        if ($nombre) { $db->prepare("INSERT INTO Tareas (nombre_tarea,descripcion,numero_inventario,fecha_programada,prioridad,id_usuario_asignado) VALUES (?,?,?,?,?,?)")->execute([$nombre,$desc,$inv,$fecha,$prior,$asig]); notificar($asig ? (int)$asig : null,'Nueva tarea asignada',$nombre,'/pages/tareas.php','task_alt'); $msg="✅ Tarea «{$nombre}» registrada."; }
         else $msg="❌ El nombre es obligatorio.";
     } elseif ($action === 'cambiar_estado') {
         $id=(int)$_POST['id_tarea'];
@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         else {
             $fechaCompletado=calcularFechaCompletado($actual,$_POST['estado']);
             $db->prepare("UPDATE Tareas SET estado=?,fecha_completado=? WHERE id_tarea=?")->execute([$_POST['estado'],$fechaCompletado,$id]);
+            notificar($actual['id_usuario_asignado'] ? (int)$actual['id_usuario_asignado'] : null,'Tarea actualizada','Estado: '.$_POST['estado'],'/pages/tareas.php','task_alt');
             $msg="✅ Estado actualizado.";
         }
     } elseif ($action === 'completar_tarea') {
@@ -46,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fechaCompletado=calcularFechaCompletado($actual,$estado);
             $db->prepare("UPDATE Tareas SET estado=?,fecha_completado=? WHERE id_tarea=?")->execute([$estado,$fechaCompletado,$id]);
             $erroresFotos=guardarEvidencias($db,$_FILES['fotos_equipo']??[],'Tarea',$id,$actual['numero_inventario']??null,$miId);
+            notificar($actual['id_usuario_asignado'] ? (int)$actual['id_usuario_asignado'] : null,'Tarea actualizada',"Marcada como {$estado}",'/pages/tareas.php','task_alt');
             $msg="✅ Tarea marcada como {$estado}.";
             if ($erroresFotos) $msg.=" ⚠ ".implode(' ',$erroresFotos);
         }
@@ -60,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nuevoAsignado = $esAdm ? ($_POST['id_usuario_asignado']?:null) : $actual['id_usuario_asignado'];
             $db->prepare("UPDATE Tareas SET nombre_tarea=?,descripcion=?,numero_inventario=?,fecha_programada=?,prioridad=?,estado=?,fecha_completado=?,id_usuario_asignado=? WHERE id_tarea=?")
                ->execute([trim($_POST['nombre_tarea']??''),trim($_POST['descripcion']??''),trim($_POST['numero_inventario']??'')?:null,$_POST['fecha_programada']?:null,$_POST['prioridad']??'Media',$nuevoEstado,$fechaCompletado,$nuevoAsignado,$id]);
+            if ($nuevoAsignado && (int)$nuevoAsignado !== (int)$actual['id_usuario_asignado']) notificar((int)$nuevoAsignado,'Tarea asignada',trim($_POST['nombre_tarea']??''),'/pages/tareas.php','task_alt');
+            elseif ($nuevoEstado !== $actual['estado']) notificar($nuevoAsignado ? (int)$nuevoAsignado : null,'Tarea actualizada','Estado: '.$nuevoEstado,'/pages/tareas.php','task_alt');
             $msg="✅ Tarea actualizada.";
         }
     } elseif ($action === 'eliminar_tarea') {

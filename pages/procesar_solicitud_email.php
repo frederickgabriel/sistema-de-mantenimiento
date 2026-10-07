@@ -53,6 +53,8 @@ if (!$token || !in_array($accion, ['aprobar', 'rechazar'], true)) {
         $upd->execute([$nuevoEstado, $respuesta, $token]);
 
         if ($upd->rowCount() === 1) {
+            if ($accion === 'aprobar') notificar((int)$sol['id_usuario'], 'Solicitud aprobada', 'Ahora tienes el rol de Administrador.', '/pages/configuracion.php', 'verified_user');
+            else notificar((int)$sol['id_usuario'], 'Solicitud rechazada', 'Tu solicitud de rol Administrador fue rechazada.', '/pages/configuracion.php', 'block');
             if ($accion === 'aprobar') {
                 $db->prepare("UPDATE Usuarios SET rol='admin' WHERE id_usuario=?")->execute([$sol['id_usuario']]);
                 $titulo  = 'Solicitud aprobada';

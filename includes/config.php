@@ -39,7 +39,7 @@ function requireLogin(): void {
         header('Location: /index.php');
         exit;
     }
-    $stmt = getDB()->prepare("SELECT activo FROM Usuarios WHERE id_usuario=?");
+    $stmt = getDB()->prepare("SELECT activo, rol FROM Usuarios WHERE id_usuario=?");
     $stmt->execute([$_SESSION['usuario']['id']]);
     $row = $stmt->fetch();
     if (!$row || (int)$row['activo'] === 0) {
@@ -47,6 +47,8 @@ function requireLogin(): void {
         header('Location: /index.php?err=' . urlencode('Tu cuenta ha sido desactivada. Contacta al administrador.'));
         exit;
     }
+    // El rol se relee en cada petición: si un admin otorga o quita permisos, se aplica al instante
+    $_SESSION['usuario']['rol'] = $row['rol'] ?? 'usuario';
 }
  
 function redirectIfLoggedIn(): void {
@@ -438,3 +440,5 @@ function enviarEmailReporteFalla(string $nombreUsuario, string $cargoUsuario, st
         return false;
     }
 }
+
+require_once __DIR__ . '/notificaciones.php';

@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    ->execute([$inv]);
 
                 $idBaja = $db->lastInsertId();
+                notificarAdmins('Nueva baja registrada', "Equipo {$inv}: {$motivo}", '/pages/bajas.php', 'inventory_2');
                 respond(true, "✅ Baja registrada correctamente.", "/pages/bajas.php?ver_pdf={$idBaja}", ['qs' => "ver_pdf={$idBaja}"]);
             } catch (PDOException $e) {
                 $msg = "❌ Error al registrar la baja: " . $e->getMessage();
@@ -61,6 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $obs     = trim($_POST['observaciones_validacion'] ?? '');
         $db->prepare("UPDATE Bajas SET estado_validacion=?, observaciones_validacion=?, fecha_validacion=NOW() WHERE id_baja=?")
            ->execute([$estado, $obs, $id]);
+        $bajaInfo = $db->prepare("SELECT id_tecnico_responsable, numero_inventario FROM Bajas WHERE id_baja=?");
+        $bajaInfo->execute([$id]);
+        if ($bajaInfo = $bajaInfo->fetch()) notificar((int)$bajaInfo['id_tecnico_responsable'], "Baja {$estado}", "Equipo {$bajaInfo['numero_inventario']}", '/pages/bajas.php', $estado === 'Validado' ? 'check_circle' : 'cancel');
         respond(true, "✅ Baja {$estado} correctamente.", '/pages/bajas.php');
     }
 
