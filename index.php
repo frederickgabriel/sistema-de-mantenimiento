@@ -24,14 +24,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (strlen($password) < 6) {
             $error = 'La contraseña debe tener al menos 6 caracteres.';
         } else {
-            try {
-                $hash = password_hash($password, PASSWORD_BCRYPT);
-                getDB()->prepare("INSERT INTO Usuarios (nombre, cargo, correo, edad, password) VALUES (?,?,?,?,?)")
-                       ->execute([$nombre, $cargo, $correo, $edad ?: null, $hash]);
-                $success = '¡Cuenta creada! Ya puedes iniciar sesión.';
-                $tab     = 'login';
-            } catch (PDOException $e) {
-                $error = ($e->getCode() == 23000) ? 'Ese correo ya está registrado.' : 'Error al registrar.';
+            $dup = getDB()->prepare("SELECT 1 FROM Usuarios WHERE correo=? LIMIT 1");
+            $dup->execute([$correo]);
+            if ($dup->fetch()) {
+                $error = 'Ese correo ya está registrado.';
+            } elseif (($errCorreo = vcErrorCorreo($correo)) !== '') {
+                $error = $errCorreo;
+            } else {
+                // La cuenta NO se crea todavía: primero se confirma que el correo es real con un código
+                $error = vcIniciar('registro', $correo, $nombre, [
+                    'nombre' => $nombre, 'cargo' => $cargo, 'edad' => $edad ?: null,
+                    'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+                ]);
+                if ($error === '') {
+                    $_SESSION['reg_pend'] = vcCorreo($correo);
+                    $success = 'Te enviamos un código de 6 dígitos a ' . vcCorreo($correo) . '. Escríbelo para crear tu cuenta.';
+                    $tab = 'verificar';
+                }
+            }
+        }
+    }
+
+    if (in_array($action, ['verificar_registro', 'reenviar_registro', 'cancelar_registro'], true)) {
+        $pend = $_SESSION['reg_pend'] ?? '';
+        $tab  = 'verificar';
+        if ($action === 'cancelar_registro' || $pend === '') {
+            unset($_SESSION['reg_pend']);
+            $tab = 'registro';
+            if ($action !== 'cancelar_registro') $error = 'La verificación venció. Vuelve a registrarte.';
+        } elseif ($action === 'reenviar_registro') {
+            $error = vcReenviar('registro', $pend);
+            if ($error === '') $success = 'Te enviamos un código nuevo a ' . $pend . '.';
+        } else {
+            $r = vcVerificar('registro', $pend, $_POST['codigo'] ?? '');
+            if (!$r['ok']) {
+                $error = $r['error'];
+            } else {
+                $d = $r['datos'];
+                try {
+                    getDB()->prepare("INSERT INTO Usuarios (nombre, cargo, correo, edad, password) VALUES (?,?,?,?,?)")
+                           ->execute([$d['nombre'], $d['cargo'], $pend, $d['edad'] ?? null, $d['password_hash']]);
+                    unset($_SESSION['reg_pend']);
+                    $success = '¡Correo verificado y cuenta creada! Ya puedes iniciar sesión.';
+                    $tab = 'login';
+                } catch (PDOException $e) {
+                    unset($_SESSION['reg_pend']);
+                    $error = ($e->getCode() == 23000) ? 'Ese correo ya está registrado.' : 'Error al registrar.';
+                    $tab = 'registro';
+                }
             }
         }
     }
@@ -169,6 +209,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Crear cuenta
                     </button>
                 </form>
+            </div>
+
+            <!-- Tab: Verificar correo (código enviado al registrarse) -->
+            <div class="tab-pane <?= $tab === 'verificar' ? 'active' : '' ?>" id="tab-verificar">
+                <form method="POST" action="/index.php">
+                    <input type="hidden" name="action" value="verificar_registro">
+                    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+                        Escribe el código de 6 dígitos que enviamos a<br>
+                        <strong><?= e($_SESSION['reg_pend'] ?? '') ?></strong>
+                    </p>
+                    <div class="form-group">
+                        <label>Código de verificación</label>
+                        <input type="text" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}"
+                               placeholder="000000" required
+                               style="text-align:center;font-size:24px;letter-spacing:10px;font-weight:700">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-full" style="margin-top:8px">Verificar y crear cuenta</button>
+                </form>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <form method="POST" action="/index.php" style="flex:1">
+                        <input type="hidden" name="action" value="reenviar_registro">
+                        <button type="submit" class="btn btn-ghost btn-full">Reenviar código</button>
+                    </form>
+                    <form method="POST" action="/index.php" style="flex:1">
+                        <input type="hidden" name="action" value="cancelar_registro">
+                        <button type="submit" class="btn btn-ghost btn-full">Cambiar correo</button>
+                    </form>
+                </div>
+                <p style="font-size:12px;color:var(--text-secondary);margin-top:12px">Revisa también la carpeta de spam. El código vence en <?= VC_MINUTOS ?> minutos.</p>
             </div>
 
             <div class="google-divider"><span>o continúa con</span></div>

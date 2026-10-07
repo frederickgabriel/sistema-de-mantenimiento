@@ -28,8 +28,42 @@ if (!$usuario) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    // --- Confirmar / reenviar / cancelar el cambio de correo ---
+    if (in_array($action, ['confirmar_correo', 'reenviar_correo', 'cancelar_correo'], true)) {
+        $tab  = 'perfil';
+        $pend = $_SESSION['cambio_correo'] ?? '';
+        $uid  = (int)$usuario['id_usuario'];
+        if ($action === 'cancelar_correo' || $pend === '') {
+            unset($_SESSION['cambio_correo']);
+            if ($pend !== '') getDB()->prepare("DELETE FROM VerificacionCorreo WHERE clave=?")->execute([vcClave('cambio', $pend, $uid)]);
+            $msg = $pend !== '' ? 'Cambio de correo cancelado.' : '';
+            if ($pend === '') $err = 'No hay un cambio de correo pendiente.';
+        } elseif ($action === 'reenviar_correo') {
+            $e2 = vcReenviar('cambio', $pend, $uid);
+            if ($e2 === '') $msg = '✅ Te enviamos un código nuevo a ' . $pend . '.'; else $err = $e2;
+        } else {
+            $r = vcVerificar('cambio', $pend, $_POST['codigo'] ?? '', $uid);
+            if (!$r['ok']) {
+                $err = $r['error'];
+            } else {
+                $dupe = $db->prepare("SELECT 1 FROM Usuarios WHERE correo=? AND id_usuario!=?");
+                $dupe->execute([$pend, $uid]);
+                if ($dupe->fetch()) {
+                    $err = 'Ese correo ya está en uso por otro usuario.';
+                } else {
+                    $db->prepare("UPDATE Usuarios SET correo=? WHERE id_usuario=?")->execute([$pend, $uid]);
+                    $_SESSION['usuario']['correo'] = $pend;
+                    $msg = '✅ Correo verificado y actualizado.';
+                }
+                unset($_SESSION['cambio_correo']);
+            }
+        }
+        $stmt->execute([$uid]);
+        $usuario = $stmt->fetch();
+    }
+
     // --- Actualizar perfil ---
-    if ($action === 'actualizar_perfil') {
+    elseif ($action === 'actualizar_perfil') {
         $nombre    = trim($_POST['nombre'] ?? '');
         $cargo     = trim($_POST['cargo'] ?? '');
         $correo    = trim($_POST['correo'] ?? '');
@@ -46,19 +80,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Verificar correo duplicado (de otro usuario)
                 $check = $db->prepare("SELECT id_usuario FROM Usuarios WHERE correo=? AND id_usuario!=?");
                 $check->execute([$correo, $usuario['id_usuario']]);
+                $cambiaCorreo = vcCorreo($correo) !== vcCorreo($usuario['correo']);
                 if ($check->fetch()) {
                     $err = 'Ese correo ya está en uso por otro usuario.';
+                } elseif ($cambiaCorreo && ($errDominio = vcErrorCorreo($correo)) !== '') {
+                    $err = $errDominio;
                 } else {
-                    $db->prepare("UPDATE Usuarios SET nombre=?, cargo=?, correo=?, edad=?, telefono=?, bio=? WHERE id_usuario=?")
-                       ->execute([$nombre, $cargo, $correo, $edad ?: null, $telefono, $bio, $usuario['id_usuario']]);
+                    // El correo actual se conserva hasta que el nuevo se confirme con un código
+                    $db->prepare("UPDATE Usuarios SET nombre=?, cargo=?, edad=?, telefono=?, bio=? WHERE id_usuario=?")
+                       ->execute([$nombre, $cargo, $edad ?: null, $telefono, $bio, $usuario['id_usuario']]);
 
                     // Actualizar sesión
                     $_SESSION['usuario']['nombre'] = $nombre;
                     $_SESSION['usuario']['cargo']  = $cargo;
-                    $_SESSION['usuario']['correo'] = $correo;
 
                     $msg = '✅ Perfil actualizado correctamente.';
                     $tab = 'perfil';
+                    if ($cambiaCorreo) {
+                        $errCorreo = vcIniciar('cambio', $correo, $nombre, ['nombre' => $nombre], (int)$usuario['id_usuario']);
+                        if ($errCorreo === '') {
+                            $_SESSION['cambio_correo'] = vcCorreo($correo);
+                            $msg = '✅ Datos guardados. Para cambiar tu correo, escribe el código que enviamos a ' . vcCorreo($correo) . '.';
+                        } else {
+                            $msg = '✅ Datos guardados, pero el correo no se cambió: ' . $errCorreo;
+                        }
+                    }
 
                     // Recargar usuario
                     $stmt->execute([$usuario['id_usuario']]);
@@ -608,6 +654,21 @@ $iniciales  = substr($iniciales, 0, 2);
                         <div class="config-section-sub">Actualiza tu nombre, correo y demás información</div>
                     </div>
                     <div class="config-section-body">
+                        <?php if (!empty($_SESSION['cambio_correo'])): ?>
+                        <div class="alert alert-warning" style="margin-bottom:18px">
+                            <strong>Confirma tu nuevo correo.</strong> Enviamos un código de 6 dígitos a <strong><?= e($_SESSION['cambio_correo']) ?></strong>. Hasta que lo escribas, sigues usando <strong><?= e($usuario['correo']) ?></strong>.
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">
+                                <form method="POST" action="/pages/configuracion.php" style="display:flex;gap:8px">
+                                    <input type="hidden" name="action" value="confirmar_correo">
+                                    <input type="text" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required
+                                           style="max-width:170px;text-align:center;font-size:18px;letter-spacing:6px;font-weight:700">
+                                    <button type="submit" class="btn btn-success btn-sm">Confirmar</button>
+                                </form>
+                                <form method="POST" action="/pages/configuracion.php"><input type="hidden" name="action" value="reenviar_correo"><button type="submit" class="btn btn-ghost btn-sm">Reenviar código</button></form>
+                                <form method="POST" action="/pages/configuracion.php"><input type="hidden" name="action" value="cancelar_correo"><button type="submit" class="btn btn-ghost btn-sm">Cancelar</button></form>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                         <form method="POST" action="/pages/configuracion.php">
                             <input type="hidden" name="action" value="actualizar_perfil">
 

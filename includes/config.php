@@ -442,3 +442,4 @@ function enviarEmailReporteFalla(string $nombreUsuario, string $cargoUsuario, st
 }
 
 require_once __DIR__ . '/notificaciones.php';
+require_once __DIR__ . '/verificacion_correo.php';
