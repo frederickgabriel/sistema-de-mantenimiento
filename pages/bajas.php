@@ -205,9 +205,7 @@ if ($verPdf) {
                 <div class="page-subtitle">Diagnóstico y validación institucional de equipos dados de baja</div>
             </div>
             <div class="page-actions">
-                <?php if (!empty($bajas)): ?>
                 <button class="btn btn-primary" onclick="abrirFormato()"><span class="material-symbols-outlined mi-sm">table_view</span> Formato de Baja</button>
-                <?php endif; ?>
                 <button class="btn btn-danger" onclick="openModal('modalNuevaBaja')">+ Dar de Baja Equipo</button>
             </div>
         </div>
@@ -547,7 +545,9 @@ new MutationObserver(() => requestAnimationFrame(actualizarSeleccion))
 function abrirFormato() {
     const ids = bajasSeleccionadas();
     if (!ids.length) {
-        zToast('Marca la casilla de al menos una baja para generar el formato.', 'warning');
+        zToast(document.querySelector('.sel-baja')
+            ? 'Marca la casilla de al menos una baja para generar el formato.'
+            : 'Aún no hay bajas registradas para generar el formato.', 'warning');
         return;
     }
     document.getElementById('formatoIds').innerHTML = '<input type="hidden" name="ids" value="' + ids.join(',') + '">';
