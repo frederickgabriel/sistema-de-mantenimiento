@@ -69,10 +69,10 @@
 const cargarZona = (function () {
     const ZONA_ID = 'ajaxFiltroZona';
 
-    function cargarZona(url, pushState) {
+    function cargarZona(url, pushState, silencioso) {
         const actual = document.getElementById(ZONA_ID);
-        if (!actual) { location.href = url; return Promise.resolve(false); }
-        actual.style.opacity = '0.45';
+        if (!actual) { if (!silencioso) location.href = url; return Promise.resolve(false); }
+        if (!silencioso) actual.style.opacity = '0.45';
         return fetch(url)
             .then((r) => { if (!r.ok) throw new Error('http'); return r.text(); })
             .then((html) => {
@@ -84,7 +84,11 @@ const cargarZona = (function () {
                 if (pushState) history.pushState({ ajaxFiltro: true }, '', url);
                 return true;
             })
-            .catch(() => { location.href = url; return false; });
+            .catch(() => {
+                if (silencioso) { actual.style.opacity = ''; return false; } // refresco en segundo plano: reintenta en el próximo ciclo
+                location.href = url;
+                return false;
+            });
     }
 
     window.ajaxFiltro = function (url) {
@@ -311,4 +315,51 @@ const cargarZona = (function () {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && modal.classList.contains('open')) cerrar();
     });
+})();
+
+
+// Tiempo real: consulta /actions/cambios.php cada pocos segundos; si otro usuario guardó, subió o
+// aprobó algo, refresca en silencio la zona actual (#ajaxFiltroZona). No interrumpe: si hay un modal
+// abierto o el usuario está escribiendo, espera al siguiente ciclo. Si cambia el rol o el estado de
+// la cuenta del usuario actual (p.ej. el admin aprueba su solicitud), recarga la página completa
+// para que el menú lateral y los permisos se actualicen.
+(function () {
+    const CADA_MS = 4000;
+    let huella = null, sesion = null, pendiente = false, ocupado = false;
+
+    function usuarioOcupado() {
+        if (document.querySelector('.modal-overlay.open, #zcOverlay.open')) return true;
+        const a = document.activeElement;
+        return !!(a && a.closest('#ajaxFiltroZona') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)
+                  && !['checkbox', 'radio', 'button', 'submit'].includes(a.type));
+    }
+
+    function ciclo() {
+        if (document.hidden || ocupado) return;
+        ocupado = true;
+        fetch('/actions/cambios.php', { cache: 'no-store' })
+            .then((r) => { if (r.status === 401) { location.reload(); throw new Error('sesion'); } return r.json(); })
+            .then((d) => {
+                if (!d.ok) return;
+                if (sesion !== null && d.sesion !== sesion) { location.reload(); return; }
+                if (huella !== null && d.v !== huella) pendiente = true;
+                huella = d.v; sesion = d.sesion;
+                if (pendiente && !usuarioOcupado()) {
+                    pendiente = false;
+                    // Dashboard y estadísticas dibujan sus gráficas con scripts propios: se recargan completas
+                    if (!document.getElementById('ajaxFiltroZona') && /\/(dashboard|estadisticas)\.php$/i.test(location.pathname)) {
+                        location.reload();
+                        return;
+                    }
+                    return cargarZona(location.href, false, true);
+                }
+            })
+            .catch(() => {})
+            .finally(() => { ocupado = false; });
+    }
+
+    if (window.location.pathname.indexOf('/pages/') !== 0) return;
+    setInterval(ciclo, CADA_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) ciclo(); });
+    ciclo();
 })();
