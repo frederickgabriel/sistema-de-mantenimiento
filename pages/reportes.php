@@ -8,6 +8,119 @@ requireLogin();
 
 $db = getDB();
 
+// =============================================
+// REPORTES GUARDADOS — archivo de reportes ya generados
+// ver=ID           → muestra la copia guardada (la misma vista previa, congelada)
+// guardar_reporte  → genera el reporte con los filtros recibidos y guarda su copia
+// =============================================
+function folioReporte(int $id): string { return 'RG-' . str_pad((string)$id, 4, '0', STR_PAD_LEFT); }
+
+if (isset($_GET['ver'])) {
+    $st = $db->prepare("SELECT html FROM Reportes_Guardados WHERE id_reporte = ?");
+    $st->execute([(int)$_GET['ver']]);
+    $html = $st->fetchColumn();
+    if ($html === false) {
+        flash('msg', '❌ Ese reporte guardado ya no existe.');
+        header('Location: /pages/reportes.php?vista=guardados');
+        exit;
+    }
+    echo $html;
+    exit;
+}
+
+// descargar=ID → el reporte guardado como archivo PDF (se genera con Dompdf desde la copia guardada)
+if (isset($_GET['descargar'])) {
+    $st = $db->prepare("SELECT titulo, html FROM Reportes_Guardados WHERE id_reporte = ?");
+    $st->execute([(int)$_GET['descargar']]);
+    $rg = $st->fetch();
+    if (!$rg) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        exit('Ese reporte guardado ya no existe.');
+    }
+    $raiz = realpath(__DIR__ . '/..');
+    $html = $rg['html'];
+    $html = preg_replace('#<div class="no-print">.*?</div>#s', '', $html, 1);                 // barra de la pantalla
+    $html = preg_replace('#@import url\([^)]*\);#', '', $html);                              // sin fuentes remotas
+    $html = preg_replace('#<link [^>]*>#', '', $html);
+    $html = str_replace(['src="/img/', 'src="/uploads/'], ['src="' . $raiz . '/img/', 'src="' . $raiz . '/uploads/'], $html);
+    $html = str_replace('</head>', '<style>body{background:#fff}.hoja{margin:0;border:none;max-width:none}.fmt-conteo{display:block}.fmt-conteo span{display:inline-block;margin-right:18px}@page{margin:1cm}</style></head>', $html);
+
+    if (!extension_loaded('gd')) $html = preg_replace('#<img [^>]*>#i', '', $html); // sin GD, Dompdf no puede incrustar el logo
+    require_once __DIR__ . '/../vendor/autoload.php';
+    $opciones = new Dompdf\Options();
+    $opciones->set('chroot', $raiz);
+    $opciones->set('isRemoteEnabled', false);
+    $opciones->set('defaultFont', 'Helvetica');
+    $pdf = new Dompdf\Dompdf($opciones);
+    $pdf->loadHtml($html, 'UTF-8');
+    $pdf->setPaper('letter', 'landscape');
+    $pdf->render();
+
+    $nombre = folioReporte((int)$_GET['descargar']) . ' - ' . $rg['titulo'];
+    $nombre = trim(preg_replace('#[\\/:*?"<>|\x00-\x1F]+#u', '', $nombre)) . '.pdf';
+    header('Content-Type: application/pdf');
+    header("Content-Disposition: attachment; filename=\"" . preg_replace('/[^\x20-\x7E]/', '_', $nombre) . "\"; filename*=UTF-8''" . rawurlencode($nombre));
+    header('Cache-Control: no-store');
+    echo $pdf->output();
+    exit;
+}
+
+$capturar = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $accion = $_POST['action'] ?? '';
+
+    if ($accion === 'guardar_reporte') {
+        // Reutiliza el mismo código que genera la vista previa: se ejecuta con los filtros recibidos
+        // y su salida se captura (ver capturarReporte() al final de cada bloque "MODO PDF")
+        $capturar = true;
+        $_GET = array_intersect_key($_POST, array_flip(['tipo', 'desde', 'hasta', 'area', 'estado'])) + ['pdf' => 1];
+        ob_start();
+    }
+    elseif ($accion === 'renombrar_reporte') {
+        $id = (int)($_POST['id_reporte'] ?? 0);
+        $titulo = mb_substr(trim($_POST['titulo'] ?? ''), 0, 150);
+        if ($titulo === '') respond(false, '❌ Escribe un nombre para el reporte.', '/pages/reportes.php?vista=guardados');
+        $db->prepare("UPDATE Reportes_Guardados SET titulo=? WHERE id_reporte=?")->execute([$titulo, $id]);
+        respond(true, '✅ Nombre actualizado.', '/pages/reportes.php?vista=guardados');
+    }
+    elseif ($accion === 'eliminar_reporte') {
+        $id = (int)($_POST['id_reporte'] ?? 0);
+        $d = $db->prepare("SELECT id_usuario FROM Reportes_Guardados WHERE id_reporte=?");
+        $d->execute([$id]);
+        $dueno = $d->fetchColumn();
+        if ($dueno === false) respond(false, '❌ Ese reporte ya no existe.', '/pages/reportes.php?vista=guardados');
+        if (!esAdmin() && (int)$dueno !== (int)$_SESSION['usuario']['id']) {
+            respond(false, '❌ Solo quien guardó el reporte o un administrador puede eliminarlo.', '/pages/reportes.php?vista=guardados');
+        }
+        // Se borran explícitamente los registros que cubría (sin depender de la FK ON DELETE CASCADE: en hostings con tablas MyISAM no se aplica)
+        $db->prepare("DELETE FROM Reportes_Guardados_Items WHERE id_reporte=?")->execute([$id]);
+        $db->prepare("DELETE FROM Reportes_Guardados WHERE id_reporte=?")->execute([$id]);
+        respond(true, '🗑 Reporte ' . folioReporte($id) . ' eliminado. Sus registros volvieron a la vista previa.', '/pages/reportes.php?vista=guardados');
+    }
+}
+
+/** Cierra la captura: guarda el HTML generado como reporte guardado, anota los registros que cubre y responde (JSON/redirect). */
+function capturarReporte(PDO $db, string $tipo, string $titulo, string $filtroTexto, string $params, array $refs): void {
+    $html = ob_get_clean();
+    if (!$refs) {
+        respond(false, '❌ No hay registros por guardar con estos filtros: los que había ya están en Reportes guardados.', '/pages/reportes.php?vista=guardados');
+    }
+    try {
+        $db->beginTransaction();
+        $db->prepare("INSERT INTO Reportes_Guardados (tipo, titulo, filtro_texto, params, total_registros, html, id_usuario) VALUES (?,?,?,?,?,?,?)")
+           ->execute([$tipo, $titulo, mb_substr($filtroTexto, 0, 255), $params, count($refs), $html, $_SESSION['usuario']['id']]);
+        $id = (int)$db->lastInsertId();
+        $ins = $db->prepare("INSERT IGNORE INTO Reportes_Guardados_Items (id_reporte, tipo, referencia) VALUES (?,?,?)");
+        foreach ($refs as $ref) $ins->execute([$id, $tipo, (string)$ref]);
+        $db->commit();
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        respond(false, '❌ No se pudo guardar el reporte: ' . $e->getMessage(), '/pages/reportes.php?vista=guardados');
+    }
+    respond(true, '✅ Reporte ' . folioReporte($id) . ' guardado. Sus ' . count($refs) . ' registro(s) ya no aparecerán en la vista previa.', '/pages/reportes.php?vista=guardados');
+}
+
 // ---- Estadísticas globales (tarjetas rápidas de la página interactiva) ----
 $stats = [
     'equipos'    => $db->query("SELECT COUNT(*) FROM Equipos WHERE estado != 'Baja'")->fetchColumn(),
@@ -25,7 +138,21 @@ $mesActual = date('Y-m');
 $mttosMes  = $db->query("SELECT COUNT(*) FROM Mantenimientos m JOIN Equipos e ON e.numero_inventario=m.numero_inventario WHERE e.estado != 'Baja' AND DATE_FORMAT(m.fecha_realizacion,'%Y-%m')='{$mesActual}'")->fetchColumn();
 
 $generarPDF   = isset($_GET['pdf']);
+$vista        = ($_GET['vista'] ?? '') === 'guardados' ? 'guardados' : 'general';
+$guardados    = $db->query("
+    SELECT r.id_reporte, r.tipo, r.titulo, r.filtro_texto, r.total_registros, r.id_usuario, r.fecha_registro, u.nombre AS usuario_nombre
+    FROM Reportes_Guardados r LEFT JOIN Usuarios u ON u.id_usuario = r.id_usuario
+    ORDER BY r.fecha_registro DESC, r.id_reporte DESC
+")->fetchAll();
+$msgFlash     = getFlash('msg') ?? '';
 $tipoReporte  = ($_GET['tipo'] ?? 'mantenimientos') === 'equipos' ? 'equipos' : 'mantenimientos';
+
+// Registros que ya cubre algún reporte guardado: no aparecen en la vista previa ni en reportes nuevos.
+// Se filtra en PHP (no con un JOIN) para no depender de la collation de las tablas del servidor.
+$yaGuardado = ['equipos' => [], 'mantenimientos' => []];
+foreach ($db->query("SELECT tipo, referencia FROM Reportes_Guardados_Items")->fetchAll() as $it) {
+    $yaGuardado[$it['tipo']][(string)$it['referencia']] = true;
+}
 
 // =============================================
 // FILTROS — Mantenimientos (rango de fechas)
@@ -64,9 +191,10 @@ if ($hayPeriodo) {
         LEFT JOIN Areas a ON e.id_area = a.id_area
         LEFT JOIN Usuarios u ON u.id_usuario = m.id_tecnico
         ORDER BY m.fecha_realizacion DESC
-        LIMIT 50
     ")->fetchAll();
 }
+$mantenimientos = array_values(array_filter($mantenimientos, fn($m) => !isset($yaGuardado['mantenimientos'][(string)$m['id_mantenimiento']])));
+if (!$hayPeriodo) $mantenimientos = array_slice($mantenimientos, 0, 50);
 
 // Equipos con próximo mantenimiento próximo o vencido
 $urgentes = $db->query("
@@ -94,7 +222,7 @@ if ($filtroAreaRep)   { $condsEqRep[] = "e.id_area=?"; $paramsEqRep[] = $filtroA
 if ($filtroEstadoRep) { $condsEqRep[] = "e.estado=?";  $paramsEqRep[] = $filtroEstadoRep; }
 $stmtEqRep = $db->prepare("SELECT e.*, a.nombre_area FROM Equipos e LEFT JOIN Areas a ON e.id_area=a.id_area WHERE " . implode(' AND ', $condsEqRep) . " ORDER BY e.numero_inventario");
 $stmtEqRep->execute($paramsEqRep);
-$equiposRep = $stmtEqRep->fetchAll();
+$equiposRep = array_values(array_filter($stmtEqRep->fetchAll(), fn($e) => !isset($yaGuardado['equipos'][(string)$e['numero_inventario']])));
 
 $equiposRepStats = [
     'total'      => count($equiposRep),
@@ -256,6 +384,7 @@ if ($generarPDF && $tipoReporte === 'equipos'):
 </body>
 </html>
     <?php
+    if ($capturar) capturarReporte($db, 'equipos', 'Inventario de Equipos — ' . $filtroEquiposTexto, $filtroEquiposTexto, http_build_query(['tipo' => 'equipos', 'area' => $filtroAreaRep, 'estado' => $filtroEstadoRep]), array_column($equiposRep, 'numero_inventario'));
     exit;
 endif;
 
@@ -428,6 +557,7 @@ if ($generarPDF):
 </body>
 </html>
     <?php
+    if ($capturar) capturarReporte($db, 'mantenimientos', 'Reporte de Mantenimientos — ' . ($hayPeriodo ? $periodoTexto : 'Historial reciente'), $periodoTexto, http_build_query(['tipo' => 'mantenimientos', 'desde' => $fechaInicio, 'hasta' => $fechaFin]), array_column($mantenimientos, 'id_mantenimiento'));
     exit;
 endif;
 // Fin modo PDF
@@ -443,7 +573,7 @@ endif;
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Reportes — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=29">
+    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=31">
 </head>
 <body>
 <div class="app-layout">
@@ -454,13 +584,83 @@ endif;
         <div class="page-header">
             <div>
                 <div class="page-title"><span class="material-symbols-outlined mi-md">bar_chart</span> Reportes</div>
-                <div class="page-subtitle">Vista previa y descarga de reportes en PDF — Mantenimientos y Equipos</div>
+                <div class="page-subtitle">Genera reportes en PDF — Mantenimientos y Equipos — y guárdalos en el archivo</div>
             </div>
             <div class="page-actions">
                 <button type="button" class="btn btn-primary" onclick="openModal('modalPeriodoPDF')"><span class="material-symbols-outlined mi-sm">download</span> Generar Reporte PDF</button>
             </div>
         </div>
 
+        <?php if ($msgFlash): ?>
+            <div class="alert <?= str_starts_with($msgFlash,'✅') ? 'alert-success' : (str_starts_with($msgFlash,'🗑') ? 'alert-info' : 'alert-error') ?>"><?= renderMsg($msgFlash) ?></div>
+        <?php endif; ?>
+
+        <div id="ajaxFiltroZona">
+
+        <nav class="seg-tabs" role="tablist" aria-label="Vista de reportes">
+            <a class="seg-tab <?= $vista === 'general' ? 'activa' : '' ?>" role="tab" aria-selected="<?= $vista === 'general' ? 'true' : 'false' ?>" href="/pages/reportes.php" onclick="return ajaxFiltro(this.href)">
+                <span class="material-symbols-outlined mi-sm">bar_chart</span> General
+            </a>
+            <a class="seg-tab <?= $vista === 'guardados' ? 'activa' : '' ?>" role="tab" aria-selected="<?= $vista === 'guardados' ? 'true' : 'false' ?>" href="/pages/reportes.php?vista=guardados" onclick="return ajaxFiltro(this.href)">
+                <span class="material-symbols-outlined mi-sm">bookmarks</span> Reportes guardados <span class="seg-n"><?= count($guardados) ?></span>
+            </a>
+        </nav>
+
+        <?php if ($vista === 'guardados'): ?>
+        <!-- ========== REPORTES GUARDADOS ========== -->
+        <?php if (empty($guardados)): ?>
+            <div class="card">
+                <div class="empty-state" style="padding:60px 20px">
+                    <span class="empty-icon material-symbols-outlined">bookmarks</span>
+                    <p>Aún no hay reportes guardados. Pulsa <strong>Generar Reporte PDF</strong>, revisa la vista previa y presiona <strong>Guardar</strong>.</p>
+                </div>
+            </div>
+        <?php else: ?>
+            <p class="marbete-aviso"><span class="material-symbols-outlined mi-sm">info</span> Cada reporte guarda una copia fija con los datos del momento en que lo guardaste. ¿Te equivocaste? Cámbiale el nombre o elimínalo y vuelve a generarlo.</p>
+            <?php
+            $secciones = [
+                'equipos'        => ['Equipos',        'computer',  'Aún no hay reportes de equipos guardados.'],
+                'mantenimientos' => ['Mantenimientos', 'checklist', 'Aún no hay reportes de mantenimientos guardados.'],
+            ];
+            foreach ($secciones as $tipoSec => [$tituloSec, $iconoSec, $vacioSec]):
+                $lista = array_values(array_filter($guardados, fn($g) => $g['tipo'] === $tipoSec)); ?>
+            <section class="archivo-seccion" aria-labelledby="sec-<?= $tipoSec ?>">
+                <h2 class="archivo-seccion-titulo" id="sec-<?= $tipoSec ?>"><span class="material-symbols-outlined mi-md"><?= $iconoSec ?></span> <?= $tituloSec ?> <span class="seg-n"><?= count($lista) ?></span></h2>
+                <?php if (!$lista): ?>
+                    <p class="archivo-vacio"><?= $vacioSec ?></p>
+                <?php endif; ?>
+                <?php foreach ($lista as $g): $folio = folioReporte((int)$g['id_reporte']);
+                $puedeBorrar = esAdmin() || (int)$g['id_usuario'] === (int)$_SESSION['usuario']['id']; ?>
+            <article class="marbete-card">
+                <div class="marbete-head">
+                    <div style="min-width:0">
+                        <div>
+                            <span class="marbete-folio"><span class="material-symbols-outlined mi-sm">bookmark</span> <?= e($folio) ?></span>
+                            <span class="marbete-tipo"><?= $g['tipo'] === 'equipos' ? 'Equipos' : 'Mantenimientos' ?></span>
+                        </div>
+                        <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-top:6px"><?= e($g['titulo']) ?></div>
+                        <div class="marbete-sub"><?= e($g['filtro_texto']) ?> · <?= (int)$g['total_registros'] ?> registro(s) · Guardado el <?= fechaES(substr($g['fecha_registro'], 0, 10)) ?> <?= e(substr($g['fecha_registro'], 11, 5)) ?> · <?= e($g['usuario_nombre'] ?? '—') ?></div>
+                    </div>
+                    <div class="marbete-acciones">
+                        <a class="btn btn-primary btn-sm" href="/pages/reportes.php?ver=<?= (int)$g['id_reporte'] ?>" data-vista="<?= e($folio . ' — ' . $g['titulo']) ?>" data-descargar="/pages/reportes.php?descargar=<?= (int)$g['id_reporte'] ?>" data-archivo="<?= e(preg_replace('#[\\/:*?"<>|]+#u', '', $folio . ' - ' . $g['titulo']) . '.pdf') ?>"><span class="material-symbols-outlined mi-sm">visibility</span> Ver</a>
+                        <a class="btn btn-success btn-sm" href="/pages/reportes.php?descargar=<?= (int)$g['id_reporte'] ?>" onclick="return zDescargar(this.href, this.dataset.archivo)" data-archivo="<?= e(preg_replace('#[\\/:*?"<>|]+#u', '', $folio . ' - ' . $g['titulo']) . '.pdf') ?>"><span class="material-symbols-outlined mi-sm">download</span> Descargar</a>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="abrirRenombrar(<?= (int)$g['id_reporte'] ?>, this.dataset.t)" data-t="<?= e($g['titulo']) ?>"><span class="material-symbols-outlined mi-sm">edit</span> Renombrar</button>
+                        <?php if ($puedeBorrar): ?>
+                        <form method="POST" style="display:inline" onsubmit="return zConfirm(this,'¿Eliminar el reporte guardado <?= e($folio) ?>?','danger')">
+                            <input type="hidden" name="action" value="eliminar_reporte">
+                            <input type="hidden" name="id_reporte" value="<?= (int)$g['id_reporte'] ?>">
+                            <button type="submit" class="btn btn-ghost btn-sm" aria-label="Eliminar reporte <?= e($folio) ?>"><span class="material-symbols-outlined mi-sm">delete</span> Eliminar</button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </article>
+                <?php endforeach; ?>
+            </section>
+            <?php endforeach; ?>
+        <?php endif; ?>
+
+        <?php else: ?>
         <!-- Stats rápidas -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -520,11 +720,11 @@ endif;
         <!-- Vista previa — Mantenimientos -->
         <div class="card" style="margin-bottom:24px">
             <div class="card-header">
-                <div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Vista Previa — Últimos Mantenimientos</div>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">checklist</span> Vista Previa — Mantenimientos por reportar</div>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($mantenimientos)): ?>
-                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">checklist</span><p>Sin registros aún.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">checklist</span><p>No hay mantenimientos por reportar. Los que ya guardaste están en <a href="/pages/reportes.php?vista=guardados" onclick="return ajaxFiltro(this.href)">Reportes guardados</a>.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -560,12 +760,12 @@ endif;
         <!-- Vista previa — Equipos -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Vista Previa — Inventario de Equipos</div>
+                <div class="card-title"><span class="material-symbols-outlined mi-md">computer</span> Vista Previa — Equipos por reportar</div>
                 <span class="text-muted" style="font-size:13px"><?= $equiposRepStats['total'] ?> equipos</span>
             </div>
             <div class="table-wrapper">
                 <?php if (empty($equiposRep)): ?>
-                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">computer</span><p>Sin equipos registrados.</p></div>
+                    <div class="empty-state"><span class="empty-icon material-symbols-outlined">computer</span><p>No hay equipos por reportar. Los que ya guardaste están en <a href="/pages/reportes.php?vista=guardados" onclick="return ajaxFiltro(this.href)">Reportes guardados</a>.</p></div>
                 <?php else: ?>
                 <table>
                     <thead>
@@ -587,7 +787,31 @@ endif;
             </div>
         </div>
 
+        <?php endif; /* vista general */ ?>
+        </div>
+
     </main>
+</div>
+
+<!-- Modal: Renombrar reporte guardado -->
+<div class="modal-overlay" id="modalRenombrar">
+    <div class="modal-box" style="max-width:440px">
+        <div class="modal-header">
+            <div class="modal-title"><span class="material-symbols-outlined mi-md">edit</span> Renombrar reporte</div>
+            <button class="modal-close" onclick="closeModal('modalRenombrar')" aria-label="Cerrar"><span class="material-symbols-outlined mi-sm">close</span></button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" action="/pages/reportes.php">
+                <input type="hidden" name="action" value="renombrar_reporte">
+                <input type="hidden" name="id_reporte" id="renombrarId">
+                <div class="form-group">
+                    <label>Nombre del reporte</label>
+                    <input type="text" name="titulo" id="renombrarTitulo" maxlength="150" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">check</span> Guardar nombre</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Modal: Generar Reporte PDF -->
@@ -647,7 +871,7 @@ endif;
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">visibility</span> Ver reporte PDF</button>
+                <button type="submit" class="btn btn-primary btn-full"><span class="material-symbols-outlined mi-sm">visibility</span> Ver vista previa</button>
                 <a href="/pages/reportes.php?pdf=1&tipo=mantenimientos" data-vista="Reporte de Mantenimientos — historial reciente" class="btn btn-ghost btn-full" id="linkTodoHistorial" style="margin-top:10px"><span class="material-symbols-outlined mi-sm">history</span> Ver todo el historial reciente</a>
             </form>
         </div>
@@ -674,8 +898,35 @@ document.getElementById('formReportePDF').addEventListener('submit', function (e
     var qs = new URLSearchParams({ pdf: 1, tipo: fd.get('tipo') });
     (esM ? ['desde', 'hasta'] : ['area', 'estado']).forEach(function (k) { if (fd.get(k)) qs.set(k, fd.get(k)); });
     closeModal('modalPeriodoPDF');
-    zVista('/pages/reportes.php?' + qs, esM ? 'Reporte de Mantenimientos' : 'Inventario de Equipos');
+    zVista('/pages/reportes.php?' + qs, esM ? 'Reporte de Mantenimientos' : 'Inventario de Equipos', null, {
+        accion: { texto: 'Guardar', icono: 'bookmark_add', onClick: function () { guardarReporte(qs); } }
+    });
 });
+
+// Guarda una copia del reporte que se está viendo; el archivo se refresca sin recargar la página
+function guardarReporte(qs) {
+    var fd = new FormData();
+    fd.append('action', 'guardar_reporte');
+    qs.forEach(function (v, k) { if (k !== 'pdf') fd.append(k, v); });
+    var btn = document.getElementById('zVistaImprimir');
+    btn.disabled = true;
+    fetch('/pages/reportes.php', { method: 'POST', body: fd, headers: { 'X-Ajax-Request': '1' } })
+        .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+        .then(function (d) {
+            if (d.ok) zVistaCerrar();
+            zToast(d.msg, d.ok ? 'success' : 'error');
+            return cargarZona(location.href, false, true);
+        })
+        .catch(function () { zToast('No se pudo guardar el reporte. Inténtalo de nuevo.', 'error'); })
+        .then(function () { btn.disabled = false; });
+}
+
+function abrirRenombrar(id, titulo) {
+    document.getElementById('renombrarId').value = id;
+    document.getElementById('renombrarTitulo').value = titulo;
+    openModal('modalRenombrar');
+    document.getElementById('renombrarTitulo').select();
+}
 
 function cambiarTipoReporte() {
     var esM = document.getElementById('selTipoReporte').value === 'mantenimientos';

@@ -252,13 +252,57 @@ const cargarZona = (function () {
     });
 })();
 
+// Descarga un archivo pidiéndole al usuario dónde guardarlo (diálogo "Guardar como" del sistema) con el
+// nombre del documento ya puesto. Chrome/Edge usan el selector de archivos; el resto de navegadores
+// descargan con ese mismo nombre (según su configuración preguntan dónde o van a Descargas).
+window.zDescargar = function (url, nombre) {
+    nombre = nombre || 'documento.pdf';
+    const bajar = (blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nombre;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    };
+    const pedir = async () => {
+        let destino = null;
+        if (window.showSaveFilePicker) {
+            try {
+                destino = await window.showSaveFilePicker({
+                    suggestedName: nombre,
+                    types: [{ description: 'Documento PDF', accept: { 'application/pdf': ['.pdf'] } }],
+                });
+            } catch (err) {
+                if (err && err.name === 'AbortError') return; // el usuario canceló el diálogo
+                destino = null;                                // sin permiso/soporte: descarga normal
+            }
+        }
+        window.zToast('Preparando el archivo…', 'info');
+        const r = await fetch(url, { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('http');
+        const blob = await r.blob();
+        if (destino) {
+            const w = await destino.createWritable();
+            await w.write(blob);
+            await w.close();
+        } else {
+            bajar(blob);
+        }
+        window.zToast('Archivo descargado: ' + nombre, 'success');
+    };
+    pedir().catch(() => window.zToast('No se pudo descargar el archivo. Inténtalo de nuevo.', 'error'));
+    return false;
+};
+
 // Vista previa de documentos imprimibles (formatos, reportes, dictámenes) dentro de la
 // página, en un modal con iframe — sin abrir ventanas nuevas. El modal se crea la primera vez.
 // Uso: <a href="/pages/doc.php" data-vista="Título" data-excel="/pages/doc_excel.php">
 //      o zVista('/pages/doc.php', 'Título', '/pages/doc_excel.php')  (excel es opcional)
 // Si el documento redirige (p.ej. no se pudo generar), se cierra y se muestra su aviso en un toast.
 (function () {
-    let modal, frame, cuerpo, titulo, btnExcel, btnImprimir;
+    let modal, frame, cuerpo, titulo, btnExcel, btnImprimir, accionPropia = null;
 
     function crear() {
         modal = document.createElement('div');
@@ -289,7 +333,10 @@ const cargarZona = (function () {
 
         modal.querySelector('#zVistaCerrar').addEventListener('click', cerrar);
         modal.addEventListener('click', (e) => { if (e.target === modal) cerrar(); });
-        btnImprimir.addEventListener('click', () => { frame.contentWindow.focus(); frame.contentWindow.print(); });
+        btnImprimir.addEventListener('click', () => {
+            if (accionPropia) { accionPropia(); return; }
+            frame.contentWindow.focus(); frame.contentWindow.print();
+        });
         frame.addEventListener('load', alCargar);
     }
 
@@ -320,8 +367,12 @@ const cargarZona = (function () {
         setTimeout(() => { if (!frame.dataset.url) frame.src = 'about:blank'; }, 250);
     }
 
-    window.zVista = function (url, tit, excelUrl) {
+    // opciones = { accion: { texto, icono, onClick } } cambia "Imprimir / PDF" por una acción propia (p.ej. Guardar)
+    window.zVista = function (url, tit, excelUrl, opciones) {
         if (!modal) crear();
+        const acc = opciones && opciones.accion;
+        accionPropia = acc ? acc.onClick : null;
+        btnImprimir.innerHTML = '<span class="material-symbols-outlined mi-sm">' + (acc ? acc.icono : 'download') + '</span><span class="z-vista-txt"> ' + (acc ? acc.texto : 'Descargar') + '</span>';
         titulo.textContent = tit || 'Vista previa';
         btnExcel.style.display = excelUrl ? '' : 'none';
         btnExcel.href = excelUrl || '#';
@@ -338,7 +389,11 @@ const cargarZona = (function () {
         const enlace = e.target.closest('a[data-vista]');
         if (enlace) {
             e.preventDefault();
-            window.zVista(enlace.getAttribute('href'), enlace.dataset.vista, enlace.dataset.excel);
+            // data-descargar: en la vista previa el botón es "Descargar" (guarda el archivo) en lugar de imprimir
+            const dl = enlace.dataset.descargar;
+            window.zVista(enlace.getAttribute('href'), enlace.dataset.vista, enlace.dataset.excel, dl
+                ? { accion: { texto: 'Descargar', icono: 'download', onClick: () => window.zDescargar(dl, enlace.dataset.archivo) } }
+                : undefined);
             return;
         }
         // Enlaces de descarga directa (adjuntos): avisan que empezó la descarga

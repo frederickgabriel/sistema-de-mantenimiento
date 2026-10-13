@@ -249,3 +249,52 @@ CREATE TABLE IF NOT EXISTS Departamentos (
 -- ALTER TABLE Areas ADD CONSTRAINT fk_area_departamento
 --     FOREIGN KEY (id_departamento) REFERENCES Departamentos(id_departamento) ON DELETE CASCADE;
 -- ALTER TABLE Areas DROP COLUMN ubicacion;
+
+
+-- =============================================
+-- TABLA: Marbetes_Bajas (archivo de formatos de baja guardados)
+-- Ver database_marbetes_bajas.sql
+-- =============================================
+CREATE TABLE IF NOT EXISTS Marbetes_Bajas (
+    id_marbete         INT AUTO_INCREMENT PRIMARY KEY,
+    tipo               VARCHAR(10)  NOT NULL DEFAULT 'activos',
+    fecha              DATE         NOT NULL,
+    fecha_verificacion DATE         NULL,
+    depto              VARCHAR(100) NOT NULL DEFAULT 'SISTEMAS',
+    ubicacion          VARCHAR(100) NOT NULL DEFAULT 'STAFF',
+    observaciones      VARCHAR(150) NULL,
+    firma_solicita     VARCHAR(60)  NULL,
+    firma_costos       VARCHAR(60)  NULL,
+    firma_finanzas     VARCHAR(60)  NULL,
+    firma_gerente      VARCHAR(60)  NULL,
+    id_usuario         INT          NULL,
+    fecha_registro     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE SET NULL
+);
+ALTER TABLE Bajas
+    ADD COLUMN id_marbete INT NULL AFTER fecha_registro,
+    ADD CONSTRAINT fk_bajas_marbete FOREIGN KEY (id_marbete) REFERENCES Marbetes_Bajas(id_marbete) ON DELETE SET NULL;
+
+-- TABLA: Reportes_Guardados (ver database_reportes_guardados.sql)
+CREATE TABLE IF NOT EXISTS Reportes_Guardados (
+    id_reporte      INT AUTO_INCREMENT PRIMARY KEY,
+    tipo            VARCHAR(20)  NOT NULL,
+    titulo          VARCHAR(150) NOT NULL,
+    filtro_texto    VARCHAR(255) NOT NULL DEFAULT '',
+    params          VARCHAR(255) NOT NULL DEFAULT '',
+    total_registros INT          NOT NULL DEFAULT 0,
+    html            LONGTEXT     NOT NULL,
+    id_usuario      INT          NULL,
+    fecha_registro  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE SET NULL
+);
+
+-- TABLA: Reportes_Guardados_Items (ver database_reportes_items.sql)
+CREATE TABLE IF NOT EXISTS Reportes_Guardados_Items (
+    id_reporte  INT NOT NULL,
+    tipo        VARCHAR(20) NOT NULL,                      -- 'equipos' | 'mantenimientos'
+    referencia  VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL, -- numero_inventario (equipos) o id_mantenimiento
+    PRIMARY KEY (id_reporte, tipo, referencia),
+    KEY idx_tipo_ref (tipo, referencia),
+    FOREIGN KEY (id_reporte) REFERENCES Reportes_Guardados(id_reporte) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

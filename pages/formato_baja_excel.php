@@ -8,12 +8,18 @@ require_once '../includes/config.php';
 requireLogin();
 require_once '../includes/formato_bajas.php';
 
-$p = fbParametros();
+$idMarbete = (int)($_GET['marbete'] ?? 0);
+$p = $idMarbete ? fbParametrosMarbete(getDB(), $idMarbete) : fbParametros();
+if (!$p) {
+    flash('msg', '❌ Ese marbete ya no existe.');
+    header('Location: /pages/bajas.php?vista=marbetes');
+    exit;
+}
 $renglones = fbRenglones(getDB(), $p['ids']);
 
 if (!$renglones) {
     flash('msg', '❌ Selecciona al menos una baja para generar el formato.');
-    header('Location: /pages/bajas.php');
+    header('Location: /pages/bajas.php' . ($idMarbete ? '?vista=marbetes' : ''));
     exit;
 }
 
@@ -25,7 +31,7 @@ try {
     exit;
 }
 
-$nombre = 'Formato_Baja_' . date('Ymd', strtotime($p['fecha'])) . '.xlsx';
+$nombre = ($idMarbete ? 'Marbete_' . $p['folio'] . '_' : 'Formato_Baja_') . date('Ymd', strtotime($p['fecha'])) . '.xlsx';
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="' . $nombre . '"');
 header('Content-Length: ' . filesize($archivo));

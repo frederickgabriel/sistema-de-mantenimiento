@@ -48,29 +48,30 @@ function fbFirmasGuardadas(): array {
     return $out;
 }
 
-/** Lee los datos de encabezado del formato desde la query string (con valores por defecto). */
-function fbParametros(): array {
+/** Lee los datos de encabezado del formato desde la query string o $_POST (con valores por defecto). */
+function fbParametros(?array $src = null): array {
+    $src ??= $_GET;
     // ids puede venir como lista separada por comas (ids=1,2,3: sin límite práctico de longitud)
     // o como arreglo (ids[]=1&ids[]=2)
-    $ids = $_GET['ids'] ?? ($_GET['id'] ?? []);
+    $ids = $src['ids'] ?? ($src['id'] ?? []);
     if (is_string($ids)) $ids = explode(',', $ids);
     $ids = array_values(array_unique(array_filter(array_map('intval', (array)$ids))));
 
-    $fecha = $_GET['fecha'] ?? '';
+    $fecha = $src['fecha'] ?? '';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) $fecha = date('Y-m-d');
-    $verif = $_GET['fecha_verificacion'] ?? '';
+    $verif = $src['fecha_verificacion'] ?? '';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $verif)) $verif = '';
 
-    $tipo = $_GET['tipo'] ?? 'activos';
+    $tipo = $src['tipo'] ?? 'activos';
     if (!in_array($tipo, ['activos', 'operacion', ''], true)) $tipo = 'activos';
 
     $firmas = FB_FIRMAS;
     $guardadas = fbFirmasGuardadas();
     foreach (FB_FIRMAS_EDITABLES as $clave) {
-        $nombre = mb_strtoupper(trim($_GET['firma_' . $clave] ?? '')) ?: $guardadas[$clave];
+        $nombre = mb_strtoupper(trim($src['firma_' . $clave] ?? '')) ?: $guardadas[$clave];
         $firmas[$clave]['nombre'] = mb_substr($nombre, 0, 60);
     }
-    if (!empty($_GET['guardar_firmas'])) {
+    if (!empty($src['guardar_firmas'])) {
         @file_put_contents(FB_FIRMAS_ARCHIVO, json_encode(
             array_map(fn($c) => $firmas[$c]['nombre'], array_combine(FB_FIRMAS_EDITABLES, FB_FIRMAS_EDITABLES)),
             JSON_UNESCAPED_UNICODE
@@ -82,9 +83,9 @@ function fbParametros(): array {
         'tipo'               => $tipo,
         'fecha'              => $fecha,
         'fecha_verificacion' => $verif,
-        'depto'              => mb_strtoupper(trim($_GET['depto'] ?? '') ?: 'SISTEMAS'),
-        'ubicacion'          => mb_strtoupper(trim($_GET['ubicacion'] ?? '') ?: 'STAFF'),
-        'observaciones'      => trim($_GET['observaciones'] ?? ''),
+        'depto'              => mb_strtoupper(trim($src['depto'] ?? '') ?: 'SISTEMAS'),
+        'ubicacion'          => mb_strtoupper(trim($src['ubicacion'] ?? '') ?: 'STAFF'),
+        'observaciones'      => trim($src['observaciones'] ?? ''),
         'firmas'             => $firmas,
     ];
 }
@@ -103,6 +104,35 @@ function fbQuery(array $p): string {
         array_map(fn($c) => 'firma_' . $c, FB_FIRMAS_EDITABLES),
         array_map(fn($c) => $p['firmas'][$c]['nombre'], FB_FIRMAS_EDITABLES)
     ));
+}
+
+/** Parámetros del formato a partir de un marbete guardado (null si no existe). */
+function fbParametrosMarbete(PDO $db, int $idMarbete): ?array {
+    $st = $db->prepare("SELECT * FROM Marbetes_Bajas WHERE id_marbete = ?");
+    $st->execute([$idMarbete]);
+    $m = $st->fetch();
+    if (!$m) return null;
+    $ids = $db->prepare("SELECT id_baja FROM Bajas WHERE id_marbete = ? ORDER BY fecha_baja, id_baja");
+    $ids->execute([$idMarbete]);
+    $p = fbParametros([
+        'ids'                => implode(',', $ids->fetchAll(PDO::FETCH_COLUMN)),
+        'tipo'               => $m['tipo'],
+        'fecha'              => $m['fecha'],
+        'fecha_verificacion' => $m['fecha_verificacion'] ?? '',
+        'depto'              => $m['depto'],
+        'ubicacion'          => $m['ubicacion'],
+        'observaciones'      => $m['observaciones'] ?? '',
+        'firma_solicita'     => $m['firma_solicita'] ?? '',
+        'firma_costos'       => $m['firma_costos'] ?? '',
+        'firma_finanzas'     => $m['firma_finanzas'] ?? '',
+        'firma_gerente'      => $m['firma_gerente'] ?? '',
+    ]);
+    $p['folio'] = fbFolio($idMarbete);
+    return $p;
+}
+
+function fbFolio(int $idMarbete): string {
+    return 'MB-' . str_pad((string)$idMarbete, 4, '0', STR_PAD_LEFT);
 }
 
 /** Convierte las bajas seleccionadas en los renglones del formato. */

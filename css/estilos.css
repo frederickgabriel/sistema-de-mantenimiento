@@ -1223,3 +1223,88 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
 .mtto-acciones form { display: contents; }
 .mtto-acciones .btn { flex-shrink: 0; min-width: 32px; padding: 6px 8px; justify-content: center; }
 .mtto-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+
+/* ---- Pestañas (control segmentado) ---- */
+.seg-tabs {
+    display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 18px;
+    background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px;
+    max-width: 100%;
+}
+.seg-tab {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+    border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--text-secondary);
+    text-decoration: none; cursor: pointer; white-space: nowrap;
+    transition: background .2s var(--ease-out), color .2s var(--ease-out), box-shadow .2s var(--ease-out), transform .12s ease-out;
+}
+.seg-tab:hover { color: var(--text-primary); }
+.seg-tab:active { transform: scale(.97); }
+.seg-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg-tab.activa { background: var(--bg-card); color: var(--text-primary); box-shadow: 0 1px 3px rgba(20,20,40,.14), 0 0 0 1px var(--border); }
+.seg-n {
+    min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--border); color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.seg-tab.activa .seg-n { background: var(--accent); color: #fff; }
+
+/* ---- Archivo de documentos guardados (marbetes de bajas, reportes guardados) ---- */
+.marbete-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg, 16px);
+    padding: 18px 20px; margin-bottom: 16px;
+    transition: border-color .2s, box-shadow .2s var(--ease-out);
+}
+.marbete-card:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(20,20,40,.08); }
+.marbete-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.marbete-folio { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+.marbete-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.marbete-tipo {
+    display: inline-flex; align-items: center; margin-left: 10px; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    background: var(--accent-glow); color: var(--accent); vertical-align: 1px;
+}
+.marbete-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.marbete-items { list-style: none; margin: 14px 0 0; padding: 0; border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; }
+.marbete-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; min-height: 52px;
+    background: var(--bg-main); transition: background .15s ease;
+}
+.marbete-item + .marbete-item { border-top: 1px solid var(--border-light); }
+.marbete-item:hover { background: var(--bg-card); }
+.marbete-item-inv { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.marbete-item-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.marbete-item-der { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.marbete-aviso { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .marbete-card, .baja-card { animation: bajaEntra .28s var(--ease-out) both; }
+    @keyframes bajaEntra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+@media (max-width: 640px) {
+    .seg-tabs { display: flex; width: 100%; }
+    .seg-tab { flex: 1; justify-content: center; padding: 0 10px; }
+    .marbete-item { flex-wrap: wrap; }
+}
+
+.archivo-seccion { margin-bottom: 28px; }
+.archivo-seccion-titulo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; letter-spacing: -.01em; }
+.archivo-vacio { font-size: 13px; color: var(--text-muted); padding: 14px 16px; border: 1px dashed var(--border); border-radius: 12px; margin: 0; }
+
+/* Equipos de un marbete: plegados por defecto, se despliegan con un clic */
+.marbete-toggle {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; min-height: 40px; padding: 0 14px 0 8px;
+    background: none; border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .12s ease-out;
+}
+.marbete-toggle:hover { background: var(--bg-main); color: var(--text-primary); border-color: var(--accent); }
+.marbete-toggle:active { transform: scale(.97); }
+.marbete-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.marbete-chevron { transition: transform .3s var(--ease-out); }
+.marbete-card.abierto .marbete-chevron { transform: rotate(180deg); }
+.marbete-detalle { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s var(--ease-out); }
+.marbete-card.abierto .marbete-detalle { grid-template-rows: 1fr; }
+.marbete-detalle-in { overflow: hidden; min-height: 0; }
+.marbete-detalle .marbete-items { max-height: 340px; overflow-y: auto; }
+.marbete-card.sin-anim .marbete-detalle, .marbete-card.sin-anim .marbete-chevron { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+    .marbete-detalle, .marbete-chevron { transition: none; }
+}
