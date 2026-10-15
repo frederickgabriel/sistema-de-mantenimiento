@@ -103,7 +103,7 @@ const cargarZona = (function () {
     function cargarZona(url, pushState, silencioso) {
         const actual = document.getElementById(ZONA_ID);
         if (!actual) { if (!silencioso) location.href = url; return Promise.resolve(false); }
-        if (!silencioso) actual.style.opacity = '0.45';
+        if (!silencioso) actual.classList.add('z-cargando');
         return fetch(url)
             .then((r) => { if (!r.ok) throw new Error('http'); return r.text(); })
             .then((html) => {
@@ -118,7 +118,8 @@ const cargarZona = (function () {
                 return true;
             })
             .catch(() => {
-                if (silencioso) { actual.style.opacity = ''; return false; } // refresco en segundo plano: reintenta en el próximo ciclo
+                actual.classList.remove('z-cargando');
+                if (silencioso) return false; // refresco en segundo plano: reintenta en el próximo ciclo
                 location.href = url;
                 return false;
             });
@@ -229,6 +230,8 @@ const cargarZona = (function () {
 
         e.preventDefault();
 
+        const btnEnvio = e.submitter || form.querySelector('[type="submit"]');
+        if (btnEnvio) btnEnvio.classList.add('btn-cargando');
         const removeSelector = form.dataset.ajaxRemove || null;
         const fd = new FormData(form);
         const url = form.getAttribute('action') || location.href;
@@ -248,7 +251,8 @@ const cargarZona = (function () {
                 }
                 mostrarToast(data.msg, data.ok);
             })
-            .catch(() => { form.submit(); });
+            .catch(() => { form.submit(); })
+            .finally(() => { if (btnEnvio) btnEnvio.classList.remove('btn-cargando'); });
     });
 })();
 
@@ -279,10 +283,13 @@ window.zDescargar = function (url, nombre) {
                 destino = null;                                // sin permiso/soporte: descarga normal
             }
         }
-        window.zToast('Preparando el archivo…', 'info');
-        const r = await fetch(url, { credentials: 'same-origin' });
-        if (!r.ok) throw new Error('http');
-        const blob = await r.blob();
+        const fin = window.zCargando ? window.zCargando.mostrar('Generando documento…') : () => {};
+        let blob;
+        try {
+            const r = await fetch(url, { credentials: 'same-origin' });
+            if (!r.ok) throw new Error('http');
+            blob = await r.blob();
+        } finally { fin(); }
         if (destino) {
             const w = await destino.createWritable();
             await w.write(blob);

@@ -81,8 +81,50 @@ if ($esAdm) {
 </script>
 <style>
 .sb-sin-transicion *, .sb-sin-transicion *::before, .sb-sin-transicion *::after { transition: none !important; }
+
+/* Grupo desplegable "Extras" */
+.nav-grupo-btn { -webkit-appearance: none; appearance: none; width: 100%; border: 1px solid transparent; background: none; font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation; }
+.nav-grupo-btn:active { transform: scale(.98); }
+.nav-grupo-btn.tiene-activo { color: var(--accent); }
+.nav-chevron { font-size: 18px; transition: transform .25s var(--ease-out); }
+.nav-grupo-btn[aria-expanded="true"] .nav-chevron { transform: rotate(180deg); }
+.nav-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s var(--ease-out); }
+.nav-sub.abierto { grid-template-rows: 1fr; }
+.nav-sub > ul { overflow: hidden; min-height: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; margin: 0 0 0 20px; padding: 0 0 0 10px; border-left: 1px solid var(--border); opacity: 0; transition: opacity .2s ease; }
+.nav-sub.abierto > ul { opacity: 1; padding-top: 4px; }
+.nav-sub .nav-item { padding: 8px 12px; font-size: 13.5px; }
+@media (min-width: 769px) {
+    .app-layout.sidebar-collapsed .nav-grupo-btn .nav-chevron { display: none; }
+    .app-layout.sidebar-collapsed .nav-sub { grid-template-rows: 1fr; }
+    .app-layout.sidebar-collapsed .nav-sub > ul { margin-left: 0; padding-left: 0; border-left: 0; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .nav-sub, .nav-chevron, .nav-sub > ul { transition: none; } }
 </style>
 
+<link rel="stylesheet" href="/css/efectos.css?v=2">
+<link rel="stylesheet" href="/css/cargando.css?v=1">
+<?php
+require_once __DIR__ . '/cargando.php'; // escenaCarga(): cubo 3D de las pantallas de carga
+// Splash de bienvenida: solo la primera página que se abre tras iniciar sesión (logout.php destruye la sesión).
+$mostrarSplash = isset($_SESSION['usuario']) && empty($_SESSION['splash_visto']);
+if ($mostrarSplash) $_SESSION['splash_visto'] = 1;
+?>
+<template id="zlEscena"><?= escenaCarga() ?></template>
+<?php if ($mostrarSplash): ?>
+<div class="zl-splash" id="zSplash" role="status" aria-live="polite" aria-label="Cargando el sistema">
+    <div class="zl-fondo" aria-hidden="true">
+        <?php foreach ([[8,'6px','5.5s','0s'],[18,'4px','7s','1.2s'],[29,'8px','6s','2.4s'],[41,'5px','8s','.6s'],[53,'7px','5s','3s'],[64,'4px','7.5s','1.8s'],[76,'6px','6.5s','.3s'],[88,'5px','5.8s','2.7s']] as [$x,$z,$t,$d]): ?>
+            <i style="--x:<?= $x ?>%;--z:<?= $z ?>;--t:<?= $t ?>;--d:<?= $d ?>"></i>
+        <?php endforeach; ?>
+    </div>
+    <div class="zl-centro">
+        <img class="zl-logo" src="/img/hytta.png" alt="Zilara TechCare">
+        <?= escenaCarga() ?>
+        <div class="zl-texto" id="zSplashTxt">Preparando tu espacio de trabajo</div>
+        <div class="zl-barra" aria-hidden="true"><span id="zSplashBarra"></span></div>
+    </div>
+</div>
+<?php endif; ?>
 <?php include __DIR__ . '/lightbox.php'; ?>
 
 <!-- Topbar móvil (solo visible en pantallas pequeñas) -->
@@ -152,6 +194,20 @@ if ($esAdm) {
                             </span>
                         <?php endif; ?>
                     </a>
+                </li>
+            <?php endif; ?>
+            <?php if (puedeVerCuentas()): $enExtras = ($currentPage === 'cuentas.php'); ?>
+                <li class="nav-grupo">
+                    <button type="button" class="nav-item nav-grupo-btn <?= $enExtras ? 'tiene-activo' : '' ?>" id="navExtrasBtn" aria-expanded="<?= $enExtras ? 'true' : 'false' ?>" aria-controls="navExtrasSub" title="Extras">
+                        <span class="material-symbols-outlined nav-icon">apps</span>
+                        <span class="nav-label">Extras</span>
+                        <span class="material-symbols-outlined nav-chevron">expand_more</span>
+                    </button>
+                    <div class="nav-sub <?= $enExtras ? 'abierto' : '' ?>" id="navExtrasSub">
+                        <ul>
+                            <?= navLink('cuentas.php', 'key', 'Cuentas', $currentPage) ?>
+                        </ul>
+                    </div>
                 </li>
             <?php endif; ?>
         </ul>
@@ -231,7 +287,9 @@ if (!function_exists('mascotaZilara')) {
 <script src="/js/asistente.js?v=6" defer></script>
 <?php endif; ?>
 
-<script src="/js/ui.js?v=11"></script>
+<script src="/js/ui.js?v=12"></script>
+<script src="/js/cargando.js?v=1"></script>
+<script src="/js/efectos.js?v=1" defer></script>
 <script src="/js/notificaciones.js?v=3" defer></script>
 <script>
 function sbToggle() {
@@ -249,10 +307,23 @@ function sbClose() {
     document.getElementById('hamBtn').classList.remove('open');
     document.body.style.overflow = '';
 }
-document.querySelectorAll('#sidebar .nav-item, #sidebar .logout-btn').forEach(el => {
+document.querySelectorAll('#sidebar .nav-item:not(.nav-grupo-btn), #sidebar .logout-btn').forEach(el => {
     el.addEventListener('click', () => { if (window.innerWidth <= 768) sbClose(); });
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') sbClose(); });
+
+// Grupo "Extras" desplegable (el estado abierto/cerrado se recuerda en este navegador)
+(function () {
+    var btn = document.getElementById('navExtrasBtn'), sub = document.getElementById('navExtrasSub');
+    if (!btn || !sub) return;
+    var enPagina = btn.classList.contains('tiene-activo');
+    try { if (!enPagina && localStorage.getItem('navExtras') === '1') { sub.classList.add('abierto'); btn.setAttribute('aria-expanded', 'true'); } } catch (e) {}
+    btn.addEventListener('click', function () {
+        var abierto = sub.classList.toggle('abierto');
+        btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        try { localStorage.setItem('navExtras', abierto ? '1' : '0'); } catch (e) {}
+    });
+})();
 
 // Colapsar sidebar a solo-íconos (escritorio)
 function sbCollapseToggle() {

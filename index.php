@@ -112,16 +112,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <link rel="stylesheet" href="/css/estilos.css?v=29">
+    <link rel="stylesheet" href="/css/estilos.css?v=32">
+    <link rel="stylesheet" href="/css/cargando.css?v=1">
+    <link rel="stylesheet" href="/css/login.css?v=1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+
+<?php require_once __DIR__ . '/includes/cargando.php'; ?>
+<template id="zlEscena"><?= escenaCarga() ?></template>
+<!-- Intro de carga: solo la primera vez que se abre el login en esta pestaña -->
+<div class="zl-splash" id="zSplash" role="status" aria-live="polite" aria-label="Cargando el sistema">
+    <div class="zl-fondo" aria-hidden="true">
+        <?php foreach ([[8,'6px','5.5s','0s'],[18,'4px','7s','1.2s'],[29,'8px','6s','2.4s'],[41,'5px','8s','.6s'],[53,'7px','5s','3s'],[64,'4px','7.5s','1.8s'],[76,'6px','6.5s','.3s'],[88,'5px','5.8s','2.7s']] as [$x,$z,$t,$d]): ?>
+            <i style="--x:<?= $x ?>%;--z:<?= $z ?>;--t:<?= $t ?>;--d:<?= $d ?>"></i>
+        <?php endforeach; ?>
+    </div>
+    <div class="zl-centro">
+        <img class="zl-logo" src="/img/hytta.png" alt="Zilara TechCare">
+        <?= escenaCarga() ?>
+        <div class="zl-texto" id="zSplashTxt">Preparando tu espacio de trabajo</div>
+        <div class="zl-barra" aria-hidden="true"><span id="zSplashBarra"></span></div>
+    </div>
+</div>
+<script>
+(function () {
+    var s = document.getElementById('zSplash');
+    try {
+        if (sessionStorage.getItem('zLoginIntro')) { if (s) s.remove(); return; }
+        sessionStorage.setItem('zLoginIntro', '1');
+    } catch (e) {}
+    document.body.classList.add('lg-con-intro');
+})();
+</script>
 
 <div class="login-wrapper">
 
     <!-- Panel izquierdo: Logo Zilara TechCare -->
     <div class="login-left">
+        <div class="lg-piso" aria-hidden="true"></div>
+        <div class="lg-particulas" aria-hidden="true">
+            <?php foreach ([[10,'5px','7s','0s'],[24,'4px','8.5s','1.5s'],[38,'6px','6.5s','3s'],[55,'4px','9s','.8s'],[70,'6px','7.5s','2.2s'],[86,'5px','8s','4s']] as [$x,$z,$t,$d]): ?>
+                <i style="--x:<?= $x ?>%;--z:<?= $z ?>;--t:<?= $t ?>;--d:<?= $d ?>"></i>
+            <?php endforeach; ?>
+        </div>
         <img src="img/hytta.png" alt="Zilara TechCare" class="login-logo-img">
+        <div class="lg-escenario" aria-hidden="true">
+            <div class="lg-mundo">
+                <div class="lg-centro"><?= escenaCarga() ?></div>
+                <div class="lg-ficha lg-f1"><span class="material-symbols-outlined">computer</span><small>Equipos</small></div>
+                <div class="lg-ficha lg-f2"><span class="material-symbols-outlined">build</span><small>Mantenimiento</small></div>
+                <div class="lg-ficha lg-f3"><span class="material-symbols-outlined">checklist</span><small>Tareas</small></div>
+                <div class="lg-ficha lg-f4"><span class="material-symbols-outlined">monitoring</span><small>Reportes</small></div>
+            </div>
+        </div>
         <p class="login-tagline">Sistema de Administración y Seguimiento<br>del Mantenimiento de Equipos de Cómputo</p>
         <div class="login-hotel">Hyatt Zilara</div>
         <div class="login-hotel-sub">Riviera Maya</div>
@@ -258,6 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 async function handleGoogleLogin(response) {
+    const fin = window.loginCargando ? window.loginCargando('Conectando con tu cuenta de Google…') : function () {};
     try {
         const res  = await fetch('/actions/google_login.php', {
             method: 'POST',
@@ -268,17 +313,13 @@ async function handleGoogleLogin(response) {
         if (data.ok) {
             window.location.href = '/pages/dashboard.php';
         } else {
+            fin();
             window.location.href = '/index.php?err=' + encodeURIComponent(data.error || 'No se pudo iniciar sesión con Google.');
         }
     } catch (e) {
+        fin();
         window.location.href = '/index.php?err=' + encodeURIComponent('Error de conexión con Google.');
     }
-}
-function switchTab(name) {
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    event.target.classList.add('active');
 }
 function togglePass(id, btn) {
     const input = document.getElementById(id);
@@ -286,6 +327,8 @@ function togglePass(id, btn) {
     btn.querySelector('span').textContent = input.type === 'password' ? 'visibility' : 'visibility_off';
 }
 </script>
+<script src="/js/cargando.js?v=1"></script>
+<script src="/js/login.js?v=1"></script>
 
 </body>
 </html>

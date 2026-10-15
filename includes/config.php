@@ -322,6 +322,12 @@ define('SMTP_USER', 'frederickaguilar317@gmail.com');
 define('SMTP_PASS', 'vdzx lmtj pqiw jhrh'); // <-- Pega aquí tu contraseña de aplicación de Gmail (16 caracteres, sin espacios)
 define('SMTP_FROM_NAME', 'Sistema ManteTech');
 
+// =============================================
+// EXTRAS › CUENTAS: clave con la que se cifran las contraseñas guardadas.
+// NO la cambies ni la pierdas: si cambia, las contraseñas ya guardadas dejan de poder leerse.
+// =============================================
+define('CUENTAS_CLAVE', '5eab9b5e9701c76bef661b6f044fde1d59029e1042ce15dbac95c223da245c81');
+
 // Verificar si el usuario actual es admin
 function esAdmin(): bool {
     return ($_SESSION['usuario']['rol'] ?? 'usuario') === 'admin';
@@ -443,3 +449,4 @@ function enviarEmailReporteFalla(string $nombreUsuario, string $cargoUsuario, st
 
 require_once __DIR__ . '/notificaciones.php';
 require_once __DIR__ . '/verificacion_correo.php';
+require_once __DIR__ . '/cuentas.php';

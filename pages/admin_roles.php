@@ -160,7 +160,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
     <link rel="shortcut icon" href="/img/favicon/favicon.ico">
     <title>Gestión de Roles — <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
-    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=29">
+    <?php include __DIR__ . '/../includes/tema_inicial.php'; ?><link rel="stylesheet" href="/css/estilos.css?v=32">
     <style>
         .solicitud-card {
             background: var(--bg-card);
@@ -282,7 +282,7 @@ $pendientes = array_filter($solicitudes, fn($s) => $s['estado'] === 'Pendiente')
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div class="roles-cols" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
             <!-- ========================
                  SOLICITUDES DE ROL

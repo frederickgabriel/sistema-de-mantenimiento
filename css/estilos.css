@@ -1308,3 +1308,32 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
 @media (prefers-reduced-motion: reduce) {
     .marbete-detalle, .marbete-chevron { transition: none; }
 }
+
+/* ---- RESPONSIVE: gestión de roles (dos columnas con estilo en línea → una sola en pantallas angostas) ---- */
+.roles-cols > * { min-width: 0; }
+@media (max-width: 900px) {
+    .roles-cols { grid-template-columns: 1fr !important; }
+}
+
+/* ---- RESPONSIVE: táctil y móvil ---- */
+@media (max-width: 768px) {
+    .page-actions { flex-wrap: wrap; }
+    .page-actions .btn { flex: 1 1 150px; white-space: normal; text-align: center; line-height: 1.25; }
+    /* 16px evita que iOS haga zoom al enfocar un campo */
+    .form-group input, .form-group select, .form-group textarea,
+    .login-card .form-group input { font-size: 16px; }
+}
+@media (pointer: coarse) {
+    .btn { min-height: 40px; }
+    .btn-icon { min-width: 40px; justify-content: center; }
+}
+@media (max-width: 768px) {
+    .user-row > div:last-child, .user-row > div:last-child div[style*="display:flex"] { flex-wrap: wrap !important; }
+}
+
+/* ---- RESPONSIVE: tabletas / escritorio angosto (menú lateral fijo + contenido ~500-760px) ---- */
+.stats-grid > *, .g1 > *, .g2 > *, .ch-card { min-width: 0; }
+@media (max-width: 1024px) {
+    .main-content .g2 { grid-template-columns: 1fr; }
+    .main-content .stats-grid[style*="repeat(4"] { grid-template-columns: repeat(2, 1fr) !important; }
+}

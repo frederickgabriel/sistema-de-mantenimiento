@@ -1,0 +1,112 @@
+/* =============================================
+   LOGIN (index.php) — escenario 3D, tarjeta con borde animado, pestañas con indicador deslizante.
+   Se carga después de estilos.css y cargando.css. El login siempre es claro (no usa el tema oscuro).
+   Solo transform/opacity; con prefers-reduced-motion todo queda quieto.
+   --lg-d: retraso de la coreografía de entrada (se alarga si hay splash de bienvenida).
+   ============================================= */
+
+body { --lg-d: 0s; }
+body.lg-con-intro { --lg-d: 1.75s; }
+
+/* ---------- Panel izquierdo: escenario ---------- */
+.login-left { overflow: hidden; isolation: isolate; gap: 0;
+    background: radial-gradient(700px circle at 20% 15%, rgba(167,139,250,.22), transparent 60%), radial-gradient(600px circle at 85% 90%, rgba(91,33,182,.14), transparent 60%), #fff; }
+.login-left > * { position: relative; z-index: 1; }
+.login-logo-img { width: clamp(220px, 28vw, 320px); margin-bottom: 4px; animation: lgSube .8s var(--ease-out) calc(var(--lg-d) + .05s) backwards; }
+.login-tagline { margin-bottom: 14px; animation: lgSube .8s var(--ease-out) calc(var(--lg-d) + .55s) backwards; }
+.login-hotel, .login-hotel-sub { animation: lgSube .8s var(--ease-out) calc(var(--lg-d) + .7s) backwards; }
+@keyframes lgSube { from { opacity: 0; transform: translateY(16px); } }
+
+/* Piso en perspectiva con cuadrícula que avanza */
+.lg-piso { position: absolute !important; z-index: 0 !important; left: -25%; right: -25%; bottom: -8%; height: 58%; pointer-events: none;
+    transform: perspective(520px) rotateX(64deg); transform-origin: 50% 100%;
+    background-image: linear-gradient(rgba(91,33,182,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(91,33,182,.2) 1px, transparent 1px);
+    background-size: 46px 46px; animation: lgPiso 3.2s linear infinite, lgFade 1s ease calc(var(--lg-d) + .2s) backwards;
+    -webkit-mask-image: linear-gradient(to top, #000 15%, transparent 90%); mask-image: linear-gradient(to top, #000 15%, transparent 90%); }
+@keyframes lgPiso { to { background-position: 0 46px; } }
+@keyframes lgFade { from { opacity: 0; } }
+
+/* Partículas */
+.lg-particulas { position: absolute !important; inset: 0; z-index: 0 !important; pointer-events: none; }
+.lg-particulas i { position: absolute; bottom: -10px; left: var(--x); width: var(--z, 5px); height: var(--z, 5px); border-radius: 50%; background: #8b5cf6; opacity: 0; animation: zlSube var(--t, 7s) ease-in var(--d, 0s) infinite; }
+
+.lg-escenario { --px: 0; --py: 0; width: min(480px, 100%); height: clamp(230px, 36vh, 360px); margin: 6px 0 14px; perspective: 1000px; }
+.lg-mundo { position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
+    transform: rotateX(calc(var(--py) * -7deg)) rotateY(calc(var(--px) * 9deg)); transition: transform .7s cubic-bezier(.34, 1.4, .64, 1); }
+.lg-mundo.lg-sigue { transition: none; }
+.lg-centro { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; animation: lgPop .9s var(--ease-out) calc(var(--lg-d) + .25s) backwards; }
+.lg-centro .zl-escena { --s: clamp(78px, 10vh, 104px); }
+@keyframes lgPop { from { opacity: 0; transform: translateZ(-160px) scale(.6); } }
+
+.lg-ficha { position: absolute; z-index: 2; width: 64px; height: 64px; border-radius: 19px; display: flex; align-items: center; justify-content: center; color: #5b21b6;
+    background: linear-gradient(145deg, #fff, #ede9fe); border: 1px solid rgba(91, 33, 182, .18);
+    box-shadow: 0 20px 28px -14px rgba(76, 29, 149, .55), inset 0 2px 0 #fff, inset 0 -4px 8px rgba(91, 33, 182, .12);
+    transform: translate3d(0, 0, var(--z)); animation: lgFicha .8s var(--ease-out) calc(var(--lg-d) + var(--e, .5s)) backwards, lgFlota 5.5s ease-in-out calc(var(--lg-d) + var(--e, .5s) + .8s) infinite; }
+.lg-ficha .material-symbols-outlined { font-size: 30px; font-variation-settings: 'FILL' 1, 'wght' 500; }
+.lg-ficha small { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b21b6; opacity: .8; }
+.lg-f1 { left: 2%;  top: 14%;    --z: 70px;  --e: .55s; }
+.lg-f2 { right: 0%; top: 4%;     --z: 100px; --e: .7s; }
+.lg-f3 { left: 9%;  bottom: 16%; --z: 40px;  --e: .85s; }
+.lg-f4 { right: 7%; bottom: 8%;  --z: 80px;  --e: 1s; }
+@keyframes lgFicha { from { opacity: 0; transform: translate3d(0, 28px, calc(var(--z) - 120px)) rotateX(-40deg); } }
+@keyframes lgFlota { 0%, 100% { transform: translate3d(0, 0, var(--z)); } 50% { transform: translate3d(0, -12px, var(--z)); } }
+
+/* ---------- Panel derecho: tarjeta ---------- */
+.login-right { perspective: 1400px; background: linear-gradient(180deg, #fff, #faf9ff); }
+@property --lg-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.login-card { position: relative; animation: lgCard .9s var(--ease-out) calc(var(--lg-d) + .1s) backwards; transform-origin: 50% 100%;
+    box-shadow: 0 2px 4px rgba(20,20,40,.04), 0 30px 60px -28px rgba(76,29,149,.38); }
+@keyframes lgCard { from { opacity: 0; transform: rotateX(12deg) translateY(34px) scale(.96); } }
+.login-card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+    background: conic-gradient(from var(--lg-ang), transparent 0 55%, #c4b5fd 70%, #5b21b6 85%, transparent 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: lgAng 6s linear infinite; }
+@keyframes lgAng { to { --lg-ang: 360deg; } }
+.login-card.lg-sacude { animation: lgSacude .5s cubic-bezier(.36, .07, .19, .97); }
+@keyframes lgSacude { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px); } 40%, 60% { transform: translateX(7px); } }
+.login-card .alert { animation: lgAlerta .45s var(--ease-out) backwards; }
+@keyframes lgAlerta { from { opacity: 0; transform: translateY(-8px); } }
+
+/* Campos: etiqueta que se ilumina y relieve al enfocar */
+.login-card .form-group label { transition: color .2s ease; }
+.login-card .form-group:focus-within label { color: #5b21b6; }
+.login-card .form-group input { transition: border-color .2s ease, box-shadow .25s ease, background .2s ease, transform .25s var(--ease-out); }
+.login-card .form-group input:focus { transform: translateY(-1px); box-shadow: 0 0 0 3px rgba(91,33,182,.12), 0 10px 18px -12px rgba(91,33,182,.5); }
+
+/* Pestañas con indicador que se desliza */
+.tab-nav { position: relative; isolation: isolate; }
+.tab-btn { position: relative; z-index: 1; }
+.tab-nav.lg-ind-listo .tab-btn.active { background: transparent; }
+.tab-nav.lg-ind-listo .tab-btn:not(.active) { color: #666; }
+.tab-ind { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: var(--w, 0); border-radius: 6px; opacity: 0; transform: translateX(var(--x, 0));
+    background: linear-gradient(145deg, #6d28d9, #4c1d95); box-shadow: 0 8px 14px -8px rgba(76,29,149,.8), inset 0 1px 0 rgba(255,255,255,.22);
+    transition: transform .4s var(--ease-out), width .4s var(--ease-out), opacity .2s ease; }
+.tab-nav.lg-ind-listo .tab-ind { opacity: 1; }
+.tab-nav.lg-ind-listo.lg-sin-ind .tab-ind { opacity: 0; }
+.tab-nav.lg-sin-trans .tab-ind { transition: none; }
+.tab-pane.active { animation: lgPane .38s var(--ease-out) backwards; }
+@keyframes lgPane { from { opacity: 0; transform: translateY(10px); } }
+
+/* Botones: brillo y relieve */
+.login-card .btn-primary, .login-card .btn-success { background-image: linear-gradient(180deg, rgba(255,255,255,.16), transparent 55%); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 10px 18px -10px rgba(76,29,149,.8); justify-content: center; }
+.login-card .btn-full { width: 100%; }
+.login-card .btn-primary:active, .login-card .btn-success:active { transform: translateY(0) scale(.98); }
+
+/* ---------- Adaptación ---------- */
+@media (max-width: 900px) {
+    .lg-escenario { height: 230px; }
+    .lg-ficha { width: 54px; height: 54px; border-radius: 16px; }
+}
+@media (max-width: 768px) {
+    .lg-escenario, .lg-piso, .lg-particulas { display: none !important; }
+    .login-logo-img { animation: none; }
+    .login-card { animation-duration: .6s; }
+}
+@media (max-height: 640px) and (min-width: 769px) { .lg-escenario { height: 200px; } .login-tagline { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .lg-piso, .lg-particulas i, .lg-ficha, .login-card::before, .tab-pane.active { animation: none !important; }
+    .lg-mundo { transform: none !important; transition: none; }
+    .login-card, .login-logo-img, .login-tagline, .login-hotel, .login-hotel-sub, .lg-centro, .login-card .alert { animation: none !important; }
+    .tab-ind { transition: none; }
+}
+@media (hover: none) { .lg-mundo { transform: none !important; } }

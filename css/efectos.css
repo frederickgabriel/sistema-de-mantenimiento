@@ -1,0 +1,122 @@
+/* =============================================
+   EFECTOS GLOBALES — profundidad 3D y movimiento (se carga desde includes/sidebar.php, en todas las páginas)
+   Principios: solo transform/opacity · el movimiento siempre significa algo (entrada, foco, presión) ·
+   la inclinación sigue al puntero 1:1 (js/efectos.js) · todo se apaga con prefers-reduced-motion y en táctil.
+   Sin JS, las tarjetas conservan su elevación original (las variables --rx/--ry valen 0).
+   ============================================= */
+
+:root {
+    --efx-lift: 0px;
+    --efx-spring: cubic-bezier(.34, 1.4, .64, 1);
+}
+
+/* ---- Tarjetas con profundidad: dashboard, estadísticas, KPI y empleados ---- */
+.dash-stat, .stat-card, .kpi-box, .employee-card {
+    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 0%; --efx-lift: 0px;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--efx-lift));
+    transition: transform .55s var(--efx-spring), border-color .2s ease, box-shadow .3s ease;
+    will-change: transform;
+}
+.dash-stats, .stats-grid, .kpi-row, .employee-grid { perspective: 1200px; }
+.dash-stat.efx-mueve, .stat-card.efx-mueve, .kpi-box.efx-mueve, .employee-card.efx-mueve { transition: border-color .2s ease, box-shadow .3s ease; }
+
+@media (hover: hover) and (pointer: fine) {
+    .dash-stat:hover, .stat-card:hover, .kpi-box:hover, .employee-card:hover {
+        --efx-lift: -4px;
+        box-shadow: 0 2px 4px rgba(20,20,40,.05), 0 24px 40px -18px rgba(76,29,149,.32);
+    }
+    html[data-theme="dark"] .dash-stat:hover, html[data-theme="dark"] .stat-card:hover,
+    html[data-theme="dark"] .kpi-box:hover, html[data-theme="dark"] .employee-card:hover {
+        box-shadow: 0 2px 4px rgba(0,0,0,.3), 0 24px 40px -18px rgba(0,0,0,.65);
+    }
+    /* destello de luz que sigue al cursor */
+    .dash-stat::after, .stat-card::after, .kpi-box::after, .employee-card::after {
+        content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+        transition: opacity .25s ease;
+        background: radial-gradient(360px circle at var(--mx) var(--my), rgba(255,255,255,.2), transparent 55%);
+    }
+    html[data-theme="dark"] .dash-stat::after, html[data-theme="dark"] .stat-card::after,
+    html[data-theme="dark"] .kpi-box::after, html[data-theme="dark"] .employee-card::after {
+        background: radial-gradient(360px circle at var(--mx) var(--my), rgba(167,139,250,.14), transparent 55%);
+    }
+    .dash-stat:hover::after, .stat-card:hover::after, .kpi-box:hover::after, .employee-card:hover::after { opacity: 1; }
+}
+.dash-stat:active, .stat-card:active, .kpi-box:active, .employee-card:active { --efx-lift: -1px; transition-duration: .12s; }
+
+/* Capas a distinta profundidad (paralaje al inclinar) */
+.dash-stat-icon, .kpi-ico, .employee-card .avatar-chip { transform: translateZ(28px); transition: transform .35s var(--ease-out), box-shadow .3s ease; }
+.dash-stat-value, .stat-value, .kpi-val { transform: translateZ(18px); }
+.dash-stat-label, .dash-stat-meta, .stat-label, .stat-meta, .kpi-lbl, .kpi-sub { transform: translateZ(8px); }
+
+/* Ícono del dashboard como "esfera" con volumen */
+.dash-stat-icon {
+    background: radial-gradient(circle at 30% 22%, rgba(255,255,255,.55), transparent 48%), var(--stat-bg, var(--accent-glow)) !important;
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,.12), 0 8px 16px -8px var(--stat-color, var(--accent));
+}
+@media (hover: hover) and (pointer: fine) {
+    .dash-stat:hover .dash-stat-icon { transform: translateZ(40px) scale(1.06); box-shadow: inset 0 -3px 6px rgba(0,0,0,.12), 0 16px 22px -8px var(--stat-color, var(--accent)); }
+}
+
+/* ---- Entrada escalonada (solo al abrir la página: js/efectos.js pone .efx-carga ~1 s) ---- */
+.efx-carga .page-header,
+.efx-carga .dash-stat, .efx-carga .stat-card, .efx-carga .kpi-box, .efx-carga .employee-card,
+.efx-carga .main-content > .card, .efx-carga .ch-card, .efx-carga .marbete-card, .efx-carga .baja-card {
+    animation: efxEntra .5s var(--ease-out) backwards;
+    animation-delay: calc(var(--efx-i, 0) * 45ms);
+}
+@keyframes efxEntra { from { opacity: 0; transform: perspective(1000px) translateY(16px) rotateX(-6deg) scale(.985); } }
+
+/* ---- Título de página: ícono como ficha con volumen ---- */
+.page-title > .material-symbols-outlined:first-child {
+    width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-variation-settings: 'FILL' 1;
+    background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.4), transparent 45%), linear-gradient(145deg, var(--accent), var(--accent-dark));
+    box-shadow: 0 10px 18px -8px rgba(91,33,182,.6), inset 0 -3px 5px rgba(0,0,0,.18);
+    transition: transform .5s var(--efx-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+    .page-title:hover > .material-symbols-outlined:first-child { transform: perspective(300px) rotateY(180deg); }
+}
+
+/* ---- Menú lateral ---- */
+.nav-item { position: relative; }
+.nav-item .nav-icon { transition: transform .3s var(--efx-spring); }
+@media (hover: hover) and (pointer: fine) {
+    .nav-item:hover .nav-icon { transform: translateX(2px) scale(1.12); }
+}
+.nav-item.active::before {
+    content: ""; position: absolute; left: -12px; top: 22%; bottom: 22%; width: 4px; border-radius: 0 4px 4px 0;
+    background: var(--accent); animation: efxBarra .35s var(--ease-out);
+}
+@keyframes efxBarra { from { transform: scaleY(0); } }
+
+/* ---- Tablas: fila resaltada con barra de acento ---- */
+tbody tr { position: relative; }
+tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.efx-carga tbody tr { animation: efxFila .4s var(--ease-out) backwards; animation-delay: calc(var(--efx-i, 0) * 22ms); }
+@keyframes efxFila { from { opacity: 0; transform: translateX(-8px); } }
+
+/* ---- Modales: aparecen con profundidad ---- */
+.modal-box { transform: perspective(900px) rotateX(9deg) translateY(18px) scale(.96); transform-origin: 50% 100%; transition: transform .38s var(--efx-spring), opacity .2s ease; opacity: 0; }
+.modal-overlay.open .modal-box { transform: perspective(900px) rotateX(0) translateY(0) scale(1); opacity: 1; }
+
+/* ---- Insignias y botones: relieve sutil ---- */
+.btn-primary { background-image: linear-gradient(180deg, rgba(255,255,255,.14), transparent 55%); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 6px -2px rgba(76,29,149,.5); }
+
+/* ---- Accesibilidad ---- */
+@media (hover: none) {
+    /* Sin puntero fino no hay inclinación: se aplana todo para que el texto no quede borroso por las capas 3D */
+    .dash-stat, .stat-card, .kpi-box, .employee-card { transform: none; transform-style: flat; will-change: auto; }
+    .dash-stat > *, .stat-card > *, .kpi-box > *, .employee-card > *,
+    .dash-stat-top > *, .dash-stat-icon, .kpi-ico, .employee-card .avatar-chip { transform: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-stat, .stat-card, .kpi-box, .employee-card { transform: none !important; transition: border-color .2s ease; }
+    .efx-carga *, .nav-item.active::before { animation: none !important; }
+    .modal-box { transform: none; }
+    .page-title:hover > .material-symbols-outlined:first-child { transform: none; }
+}
+@media print { .efx-carga * { animation: none !important; } .dash-stat, .stat-card, .kpi-box, .employee-card { transform: none !important; } }
